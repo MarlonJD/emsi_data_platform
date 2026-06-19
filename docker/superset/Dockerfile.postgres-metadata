@@ -1,0 +1,7 @@
+ARG SUPERSET_IMAGE=apache/superset:6.1.0
+FROM ${SUPERSET_IMAGE}
+
+USER root
+COPY docker/superset/requirements-postgres-metadata.txt /tmp/requirements-postgres-metadata.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-postgres-metadata.txt
+USER superset

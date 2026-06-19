@@ -1,0 +1,77 @@
+services:
+  superset-postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18.4-alpine3.24}
+    profiles: ["superset"]
+    environment:
+      PGDATA: ${POSTGRES_PGDATA:-/var/lib/postgresql/18/docker}
+      POSTGRES_DB: ${SUPERSET_POSTGRES_DB:-superset}
+      POSTGRES_USER: ${SUPERSET_POSTGRES_USER:-superset}
+      POSTGRES_PASSWORD: ${SUPERSET_POSTGRES_PASSWORD:-superset_local_password}
+    ports:
+      - "5440:5432"
+    volumes:
+      - superset_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  superset-init:
+    image: ${SUPERSET_CUSTOM_IMAGE:-emsi-superset-postgres-metadata:6.1.0-psycopg2-2.9.10-local}
+    build:
+      context: .
+      dockerfile: docker/superset/Dockerfile.postgres-metadata
+      args:
+        SUPERSET_IMAGE: ${SUPERSET_IMAGE:-apache/superset:6.1.0}
+    profiles: ["superset"]
+    depends_on:
+      superset-postgres:
+        condition: service_healthy
+    environment:
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_METADATA_DATABASE_URI: postgresql+psycopg2://${SUPERSET_POSTGRES_USER:-superset}:${SUPERSET_POSTGRES_PASSWORD:-superset_local_password}@superset-postgres:5432/${SUPERSET_POSTGRES_DB:-superset}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-me-local-dev-only}
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+      SUPERSET_ADMIN_FIRSTNAME: ${SUPERSET_ADMIN_FIRSTNAME:-EMSI}
+      SUPERSET_ADMIN_LASTNAME: ${SUPERSET_ADMIN_LASTNAME:-Admin}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@example.local}
+    volumes:
+      - ./docker/superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+    command:
+      - /bin/sh
+      - -lc
+      - |
+        superset db upgrade
+        superset fab create-admin \
+          --username "$${SUPERSET_ADMIN_USERNAME}" \
+          --firstname "$${SUPERSET_ADMIN_FIRSTNAME}" \
+          --lastname "$${SUPERSET_ADMIN_LASTNAME}" \
+          --email "$${SUPERSET_ADMIN_EMAIL}" \
+          --password "$${SUPERSET_ADMIN_PASSWORD}" || true
+        superset init
+
+  superset-webserver:
+    image: ${SUPERSET_CUSTOM_IMAGE:-emsi-superset-postgres-metadata:6.1.0-psycopg2-2.9.10-local}
+    build:
+      context: .
+      dockerfile: docker/superset/Dockerfile.postgres-metadata
+      args:
+        SUPERSET_IMAGE: ${SUPERSET_IMAGE:-apache/superset:6.1.0}
+    profiles: ["superset"]
+    depends_on:
+      superset-postgres:
+        condition: service_healthy
+    environment:
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_METADATA_DATABASE_URI: postgresql+psycopg2://${SUPERSET_POSTGRES_USER:-superset}:${SUPERSET_POSTGRES_PASSWORD:-superset_local_password}@superset-postgres:5432/${SUPERSET_POSTGRES_DB:-superset}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-change-me-local-dev-only}
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./docker/superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+    command: ["superset", "run", "-h", "0.0.0.0", "-p", "8088"]
+
+volumes:
+  superset_postgres_data:

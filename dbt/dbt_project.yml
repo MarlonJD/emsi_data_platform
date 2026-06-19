@@ -1,0 +1,17 @@
+name: emsi_data_platform
+version: "0.1.0"
+config-version: 2
+profile: emsi_data_platform
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  emsi_data_platform:
+    staging:
+      +schema: stage
+      +materialized: view

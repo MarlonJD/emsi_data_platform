@@ -1,0 +1,14 @@
+ARG PYTHON_IMAGE=python:3.12.13-slim-bookworm
+FROM ${PYTHON_IMAGE}
+
+ARG SODA_CORE_VERSION=4.14.0
+ARG SODA_POSTGRES_VERSION=4.14.0
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /workspace
+
+RUN pip install --no-cache-dir \
+    "soda-core==${SODA_CORE_VERSION}" \
+    "soda-postgres==${SODA_POSTGRES_VERSION}"

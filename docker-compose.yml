@@ -1,0 +1,186 @@
+name: emsi-data-platform
+
+x-postgres-env: &postgres-env
+  PGDATA: ${POSTGRES_PGDATA:-/var/lib/postgresql/18/docker}
+
+services:
+  analytics-postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18.4-alpine3.24}
+    profiles: ["local"]
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+    ports:
+      - "5438:5432"
+    volumes:
+      - analytics_postgres_data:/var/lib/postgresql
+      - ./sql/analytics-postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  dagster-postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18.4-alpine3.24}
+    profiles: ["local"]
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: ${DAGSTER_POSTGRES_DB:-dagster}
+      POSTGRES_USER: ${DAGSTER_POSTGRES_USER:-dagster}
+      POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD:-dagster_local_password}
+    ports:
+      - "5439:5432"
+    volumes:
+      - dagster_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  dagster-webserver:
+    build:
+      context: .
+      dockerfile: docker/dagster/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        DAGSTER_VERSION: ${DAGSTER_VERSION:-1.13.9}
+        DAGSTER_WEBSERVER_VERSION: ${DAGSTER_WEBSERVER_VERSION:-1.13.9}
+        DAGSTER_POSTGRES_VERSION: ${DAGSTER_POSTGRES_VERSION:-0.29.9}
+        DAGSTER_DBT_VERSION: ${DAGSTER_DBT_VERSION:-0.29.9}
+        DBT_CORE_VERSION: ${DBT_CORE_VERSION:-1.11.11}
+        DBT_POSTGRES_VERSION: ${DBT_POSTGRES_VERSION:-1.10.1}
+    profiles: ["local"]
+    depends_on:
+      dagster-postgres:
+        condition: service_healthy
+      analytics-postgres:
+        condition: service_healthy
+    environment:
+      DAGSTER_HOME: /workspace/.dagster
+      DAGSTER_POSTGRES_HOST: dagster-postgres
+      DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB:-dagster}
+      DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER:-dagster}
+      DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD:-dagster_local_password}
+      ANALYTICS_POSTGRES_HOST: analytics-postgres
+      ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+    ports:
+      - "3000:3000"
+    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/workspace/dagster_workspace.yaml"]
+
+  dagster-daemon:
+    build:
+      context: .
+      dockerfile: docker/dagster/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        DAGSTER_VERSION: ${DAGSTER_VERSION:-1.13.9}
+        DAGSTER_WEBSERVER_VERSION: ${DAGSTER_WEBSERVER_VERSION:-1.13.9}
+        DAGSTER_POSTGRES_VERSION: ${DAGSTER_POSTGRES_VERSION:-0.29.9}
+        DAGSTER_DBT_VERSION: ${DAGSTER_DBT_VERSION:-0.29.9}
+        DBT_CORE_VERSION: ${DBT_CORE_VERSION:-1.11.11}
+        DBT_POSTGRES_VERSION: ${DBT_POSTGRES_VERSION:-1.10.1}
+    profiles: ["local"]
+    depends_on:
+      dagster-postgres:
+        condition: service_healthy
+      analytics-postgres:
+        condition: service_healthy
+    environment:
+      DAGSTER_HOME: /workspace/.dagster
+      DAGSTER_POSTGRES_HOST: dagster-postgres
+      DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB:-dagster}
+      DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER:-dagster}
+      DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD:-dagster_local_password}
+      ANALYTICS_POSTGRES_HOST: analytics-postgres
+      ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+    command: ["dagster-daemon", "run", "-w", "/workspace/dagster_workspace.yaml"]
+
+  dbt-runner:
+    build:
+      context: .
+      dockerfile: docker/dbt/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        DBT_CORE_VERSION: ${DBT_CORE_VERSION:-1.11.11}
+        DBT_POSTGRES_VERSION: ${DBT_POSTGRES_VERSION:-1.10.1}
+    profiles: ["local"]
+    depends_on:
+      analytics-postgres:
+        condition: service_healthy
+    environment:
+      DBT_PROFILES_DIR: /workspace/dbt
+      ANALYTICS_POSTGRES_HOST: analytics-postgres
+      ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+    volumes:
+      - ./dbt:/workspace/dbt:ro
+    command: ["sleep", "infinity"]
+
+  soda-runner:
+    build:
+      context: .
+      dockerfile: docker/soda/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        SODA_CORE_VERSION: ${SODA_CORE_VERSION:-4.14.0}
+        SODA_POSTGRES_VERSION: ${SODA_POSTGRES_VERSION:-4.14.0}
+    profiles: ["local"]
+    depends_on:
+      analytics-postgres:
+        condition: service_healthy
+    environment:
+      ANALYTICS_POSTGRES_HOST: analytics-postgres
+      ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+    volumes:
+      - ./soda:/workspace/soda:ro
+    command: ["sleep", "infinity"]
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:13.0.2}
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  evidence:
+    build:
+      context: .
+      dockerfile: docker/evidence/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22.17.0-bookworm-slim}
+    profiles: ["evidence"]
+    working_dir: /workspace/evidence
+    ports:
+      - "3002:3000"
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+
+  seaweedfs:
+    image: ${SEAWEEDFS_IMAGE:-chrislusf/seaweedfs:4.34}
+    profiles: ["object-storage"]
+    command: ["server", "-s3", "-ip=0.0.0.0", "-dir=/data"]
+    ports:
+      - "8333:8333"
+      - "9333:9333"
+    volumes:
+      - seaweedfs_data:/data
+
+volumes:
+  analytics_postgres_data:
+  dagster_postgres_data:
+  grafana_data:
+  seaweedfs_data:

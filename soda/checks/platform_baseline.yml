@@ -1,0 +1,4 @@
+checks for analytics_platform_smoke:
+  - row_count >= 0:
+      name: Local smoke placeholder row count
+      samples limit: 0

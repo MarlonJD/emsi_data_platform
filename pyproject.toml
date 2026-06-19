@@ -1,0 +1,19 @@
+[project]
+name = "emsi-data-platform"
+version = "0.1.0"
+description = "EMSI local-dev data platform scaffold."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "dagster==1.13.9",
+  "dagster-webserver==1.13.9",
+  "dagster-postgres==0.29.9",
+  "dagster-dbt==0.29.9",
+  "dbt-core==1.11.11",
+  "dbt-postgres==1.10.1",
+]
+
+[tool.dagster]
+module_name = "dagster_project.definitions"
+
+[tool.ruff]
+target-version = "py312"
