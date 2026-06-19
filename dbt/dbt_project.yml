@@ -15,3 +15,10 @@ models:
     staging:
       +schema: stage
       +materialized: view
+      +tags:
+        - phase_d_smoke
+    raw_vault:
+      +schema: raw_vault
+      +materialized: view
+      +tags:
+        - phase_d_smoke

@@ -1,9 +1,8 @@
-data_source analytics_postgres:
-  type: postgres
-  connection:
-    host: ${ANALYTICS_POSTGRES_HOST}
-    port: 5432
-    database: ${ANALYTICS_POSTGRES_DB}
-    username: ${ANALYTICS_POSTGRES_USER}
-    password: ${ANALYTICS_POSTGRES_PASSWORD}
-    schema: analytics
+type: postgres
+name: analytics_postgres
+connection:
+  host: ${env.ANALYTICS_POSTGRES_HOST}
+  port: 5432
+  user: ${env.ANALYTICS_POSTGRES_USER}
+  password: ${env.ANALYTICS_POSTGRES_PASSWORD}
+  database: ${env.ANALYTICS_POSTGRES_DB}

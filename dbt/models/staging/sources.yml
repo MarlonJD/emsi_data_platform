@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: analytics
+    description: Local-dev analytics PostgreSQL landing schema.
+    schema: analytics
+    tables:
+      - name: raw_event_landing
+        description: Accepted privacy-gated EMSI analytics event envelopes.

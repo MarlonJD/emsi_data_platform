@@ -1,15 +1,3 @@
-storage:
-  postgres:
-    postgres_db:
-      hostname:
-        env: DAGSTER_POSTGRES_HOST
-      db_name:
-        env: DAGSTER_POSTGRES_DB
-      username:
-        env: DAGSTER_POSTGRES_USER
-      password:
-        env: DAGSTER_POSTGRES_PASSWORD
-
 run_storage:
   module: dagster_postgres.run_storage
   class: PostgresRunStorage

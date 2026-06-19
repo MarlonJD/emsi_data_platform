@@ -1,0 +1,36 @@
+dataset: analytics_postgres/analytics/analytics/raw_event_landing
+
+checks:
+  - row_count:
+      name: Raw event landing is non-empty
+      threshold:
+        must_be_greater_than: 0
+  - failed_rows:
+      name: Event timestamps are present and ordered
+      qualifier: valid_timestamps
+      expression: |
+        occurred_at IS NULL
+        OR received_at IS NULL
+        OR occurred_at > received_at + interval '5 minutes'
+        OR occurred_at < timestamp with time zone '2020-01-01T00:00:00Z'
+        OR received_at > now() + interval '5 minutes'
+  - failed_rows:
+      name: Disallowed raw personal identifiers are absent
+      qualifier: no_raw_identifiers
+      expression: |
+        subject_user_hash LIKE '%@%'
+        OR subject::text ~* '("email"|"phone"|"authorization"|"token"|"user_id"|"userId"|"raw_user_id"|"actor_user_id"|"actorUserId")'
+        OR payload::text ~* '("email"|"phone"|"authorization"|"token"|"user_id"|"userId"|"raw_user_id"|"actor_user_id"|"actorUserId")'
+
+columns:
+  - name: event_id
+    checks:
+      - missing:
+          name: Event IDs are present
+      - duplicate:
+          name: Event IDs are unique
+  - name: privacy_class
+    checks:
+      - invalid:
+          name: Privacy class is allowed
+          valid_values: ["pseudonymous"]

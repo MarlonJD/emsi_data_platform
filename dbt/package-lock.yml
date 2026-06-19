@@ -1,0 +1,5 @@
+packages:
+  - name: datavault4dbt
+    package: ScalefreeCOM/datavault4dbt
+    version: 1.18.3
+sha1_hash: 639a1ff6eb306d98a94a555738cd77590977ffa1

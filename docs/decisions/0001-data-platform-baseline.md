@@ -58,6 +58,9 @@ Status: baseline
 - `dbt-postgres==1.10.1`.
 - dbt Core 2/Fusion is not a baseline here; it stays in a separate watch or
   certification lane.
+- The first local EMSI event models stage `analytics.raw_event_landing` and
+  build Raw Vault-compatible event hub and payload satellite views with hashes
+  and bounded event metadata, not raw `subject` or `payload` JSON.
 
 Production gap: dbt artifacts, lineage, CI promotion, and source-bound
 acceptance checks are not yet established.
@@ -115,6 +118,9 @@ Status: local-dev
   Soda v4 PostgreSQL package.
 - Start with self-hosted/local Docker runner only.
 - Do not enable Soda Cloud for the baseline.
+- The first local checks cover non-empty landing rows, unique `event_id`,
+  timestamp order, allowed privacy classes, and blocked raw personal identifier
+  keys in subject or payload fields.
 
 Production gap: local runtime scans are not production DQ readiness. Production
 DQ requires source-bound target windows, owner-approved thresholds, evidence ids,

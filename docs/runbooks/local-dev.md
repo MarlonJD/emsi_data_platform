@@ -57,6 +57,34 @@ malformed events, restarts the worker, then verifies:
 - the malformed event appears in `analytics.raw_event_dlq`;
 - ingest checkpoint rows exist.
 
+## Transform, Quality, And Dagster Smoke
+
+Run this after the ingest smoke so `analytics.raw_event_landing` is non-empty:
+
+```sh
+./scripts/run_phase_d_smoke.sh
+```
+
+The smoke starts local analytics and Dagster metadata PostgreSQL, then runs:
+
+- `dbt deps`;
+- `dbt debug`;
+- `dbt run --select tag:phase_d_smoke`;
+- `soda contract verify --data-source /workspace/soda/configuration.yml --contract /workspace/soda/contracts/raw_event_landing.yml`;
+- `dagster job execute -f /workspace/dagster_project/definitions.py -j phase_d_local_smoke_job`.
+
+The dbt slice creates the first local staging view over
+`analytics.raw_event_landing` plus Raw Vault-compatible event hub and payload
+satellite views. Those views carry hashes and bounded event metadata, not raw
+`subject` or `payload` JSON. The Soda v4 contract checks non-empty landing data,
+unique event ids, timestamp order, allowed privacy classes, and absence of
+blocked raw personal identifier keys in landed subject/payload fields. The
+Dagster job runs the same local flow as orchestration evidence.
+
+This remains local-dev integration evidence. It does not prove production DQ
+readiness, retention, owner approval, or production source-bound target-window
+quality.
+
 ## EMSI Go API Integration
 
 From the EMSI monorepo parent, the backend opt-in target starts this
@@ -103,7 +131,12 @@ Passed by local runtime only when run successfully:
 - PostgreSQL containers become healthy.
 - Dagster webserver starts against its own metadata database.
 - dbt dependencies resolve and `dbt debug` can connect to analytics Postgres.
-- Soda v4 runner can connect to analytics Postgres.
+- dbt Phase D staging and Raw Vault-compatible models run against
+  `analytics.raw_event_landing`.
+- Soda v4 runner can connect to analytics Postgres and pass the local landing
+  contract guardrails.
+- Dagster can execute `phase_d_local_smoke_job` for the local ingest/dbt/Soda
+  flow.
 - Superset metadata backup/restore smoke passes against PostgreSQL metadata DB.
 
 Skipped by default:

@@ -49,7 +49,7 @@ Run one-off dbt and Soda containers after the databases are healthy:
 
 ```sh
 docker compose --env-file versions.env --env-file .env --profile local run --rm dbt-runner dbt deps --project-dir /workspace/dbt
-docker compose --env-file versions.env --env-file .env --profile local run --rm soda-runner soda scan -d analytics_postgres -c /workspace/soda/configuration.yml /workspace/soda/checks
+docker compose --env-file versions.env --env-file .env --profile local run --rm soda-runner soda contract verify --data-source /workspace/soda/configuration.yml --contract /workspace/soda/contracts/raw_event_landing.yml
 ```
 
 Optional BI and observability profiles:
@@ -83,6 +83,23 @@ and checks again. The ingest worker lands the valid event once in
 `analytics.raw_event_dlq` with bounded metadata only, and updates checkpoint and
 metric rows. The DLQ path stores hashes, sizes, event ids, and error codes; it
 does not store raw payload bodies.
+
+Run the local transform and quality smoke after the ingest smoke has produced
+landing rows:
+
+```sh
+./scripts/run_phase_d_smoke.sh
+```
+
+The Phase D smoke runs dbt dependencies, `dbt debug`, and the first staging plus
+Raw Vault-compatible models over `analytics.raw_event_landing`. The dbt views
+carry hashes and bounded event metadata, not raw `subject` or `payload` JSON.
+The smoke then runs the Soda v4 local contract for non-empty landing data,
+unique event ids, valid event timestamps, allowed privacy classes, and blocked
+raw personal identifier keys.
+The Dagster `phase_d_local_smoke_job` executes the same local ingest/dbt/Soda
+flow as orchestration evidence. This is local-dev evidence only, not production
+data-quality readiness.
 
 Superset metadata backup/restore local smoke:
 

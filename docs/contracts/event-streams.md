@@ -91,6 +91,22 @@ Status: Phase C local-dev ingest worker implemented; runtime smoke passed.
   malformed envelope, then checks that the valid event lands once and the
   malformed event reaches the DLQ.
 
+## Downstream Local Smoke Status
+
+Status: Phase D local-dev dbt/Soda/Dagster smoke implemented.
+
+- dbt stages `analytics.raw_event_landing` in `stg_analytics_events` and builds
+  Raw Vault-compatible event hub and payload satellite views with hashes and
+  bounded event metadata, not raw `subject` or `payload` JSON.
+- Soda checks `analytics.raw_event_landing` for non-empty data, unique
+  `event_id`, timestamp order, allowed privacy classes, and blocked raw
+  personal identifier keys in subject or payload fields.
+- Dagster exposes `phase_d_local_smoke_job` to run the landing guardrail check,
+  dbt smoke, and Soda scan as a local orchestration path.
+- The checks are local integration evidence only. Production data-quality
+  readiness still requires owner-approved source windows, thresholds, retention,
+  and privacy/legal review.
+
 ## Production Blockers
 
 - TLS, SASL, ACLs, and secret rotation.

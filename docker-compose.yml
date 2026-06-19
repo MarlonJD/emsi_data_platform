@@ -53,6 +53,9 @@ services:
         DAGSTER_DBT_VERSION: ${DAGSTER_DBT_VERSION:-0.29.9}
         DBT_CORE_VERSION: ${DBT_CORE_VERSION:-1.11.11}
         DBT_POSTGRES_VERSION: ${DBT_POSTGRES_VERSION:-1.10.1}
+        SODA_CORE_VERSION: ${SODA_CORE_VERSION:-4.14.0}
+        SODA_POSTGRES_VERSION: ${SODA_POSTGRES_VERSION:-4.14.0}
+        PSYCOPG2_BINARY_VERSION: ${PSYCOPG2_BINARY_VERSION:-2.9.12}
     profiles: ["local"]
     depends_on:
       dagster-postgres:
@@ -65,6 +68,7 @@ services:
       DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB:-dagster}
       DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER:-dagster}
       DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD:-dagster_local_password}
+      DBT_PROFILES_DIR: /workspace/dbt
       ANALYTICS_POSTGRES_HOST: analytics-postgres
       ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
       ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
@@ -85,6 +89,9 @@ services:
         DAGSTER_DBT_VERSION: ${DAGSTER_DBT_VERSION:-0.29.9}
         DBT_CORE_VERSION: ${DBT_CORE_VERSION:-1.11.11}
         DBT_POSTGRES_VERSION: ${DBT_POSTGRES_VERSION:-1.10.1}
+        SODA_CORE_VERSION: ${SODA_CORE_VERSION:-4.14.0}
+        SODA_POSTGRES_VERSION: ${SODA_POSTGRES_VERSION:-4.14.0}
+        PSYCOPG2_BINARY_VERSION: ${PSYCOPG2_BINARY_VERSION:-2.9.12}
     profiles: ["local"]
     depends_on:
       dagster-postgres:
@@ -97,6 +104,7 @@ services:
       DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB:-dagster}
       DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER:-dagster}
       DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD:-dagster_local_password}
+      DBT_PROFILES_DIR: /workspace/dbt
       ANALYTICS_POSTGRES_HOST: analytics-postgres
       ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
       ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
@@ -122,7 +130,7 @@ services:
       ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
       ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
     volumes:
-      - ./dbt:/workspace/dbt:ro
+      - ./dbt:/workspace/dbt
     command: ["sleep", "infinity"]
 
   soda-runner:

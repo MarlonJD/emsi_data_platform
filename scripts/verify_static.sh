@@ -6,6 +6,8 @@ grep -q "POSTGRES_VOLUME_TARGET=/var/lib/postgresql" versions.env
 grep -q "PYTHON_IMAGE=python:3.12.13-slim-bookworm" versions.env
 grep -q "dagster==1.13.9" pyproject.toml
 grep -q "dbt-core==1.11.11" pyproject.toml
+grep -q "apt-get install -y --no-install-recommends git" docker/dbt/Dockerfile
+grep -q "apt-get install -y --no-install-recommends git" docker/dagster/Dockerfile
 grep -q "SODA_CORE_VERSION=4.14.0" versions.env
 grep -q "SODA_POSTGRES_VERSION=4.14.0" versions.env
 grep -q "REDPANDA_IMAGE=redpandadata/redpanda:v26.1.10" versions.env
@@ -18,6 +20,16 @@ grep -q "kafka-python==3.0.2" pyproject.toml
 grep -q "psycopg2-binary==2.9.12" pyproject.toml
 grep -q "psycopg2-binary==2.9.10" docker/superset/requirements-postgres-metadata.txt
 grep -q "ScalefreeCOM/datavault4dbt" dbt/packages.yml
+test -f dbt/models/staging/stg_analytics_events.sql
+grep -q "event_hk" dbt/models/staging/stg_analytics_events.sql
+test -f dbt/models/raw_vault/hub_analytics_event.sql
+grep -q "event_business_key" dbt/models/raw_vault/hub_analytics_event.sql
+grep -q "name: analytics_postgres" soda/configuration.yml
+grep -q "dataset: analytics_postgres/analytics/analytics/raw_event_landing" soda/contracts/raw_event_landing.yml
+grep -q "soda contract verify" scripts/run_phase_d_smoke.sh
+grep -q "phase_d_local_smoke_job" dagster_project/definitions.py
+grep -q "soda-core==4.14.0" pyproject.toml
+grep -q "soda-postgres==4.14.0" pyproject.toml
 
 PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
   python3 -m py_compile dagster_project/*.py ingest_worker/*.py

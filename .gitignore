@@ -8,6 +8,10 @@ __pycache__/
 data/
 artifacts/
 exports/
+dbt/.user.yml
+dbt/dbt_packages/
+dbt/logs/
+dbt/target/
 *.duckdb
 *.parquet
 *.csv
