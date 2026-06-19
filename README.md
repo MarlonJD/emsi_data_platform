@@ -25,6 +25,8 @@ deployment review.
 - Data Vault: `ScalefreeCOM/datavault4dbt==1.18.3`.
 - Event streaming: `redpandadata/redpanda:v26.1.10` as a local-dev candidate
   broker, with Kafka API as the protocol contract.
+- ClickHouse: `clickhouse/clickhouse-server:25.8.24.21` as an optional
+  hot-analytics candidate fed from the canonical PostgreSQL landing path.
 - Soda v4: `soda-core==4.14.0`, `soda-postgres==4.14.0`.
 - Superset: `apache/superset:6.1.0` plus a narrow local custom image that adds
   `psycopg2-binary==2.9.10` for PostgreSQL metadata storage.
@@ -100,6 +102,21 @@ raw personal identifier keys.
 The Dagster `phase_d_local_smoke_job` executes the same local ingest/dbt/Soda
 flow as orchestration evidence. This is local-dev evidence only, not production
 data-quality readiness.
+
+Run the optional ClickHouse hot analytics candidate smoke only after the local
+canonical path is available:
+
+```sh
+./scripts/run_clickhouse_candidate_smoke.sh
+```
+
+The smoke first reruns the ingest smoke so `analytics.raw_event_landing` is the
+source of truth. It then starts the `hot-analytics` profile, creates the
+ClickHouse candidate schema, copies only bounded/hash event columns into
+`analytics_events_local_candidate`, builds an hourly `SummingMergeTree`
+aggregate, and compares the same bounded hourly aggregate against PostgreSQL.
+The printed timing is a local candidate benchmark only; it does not justify
+default startup or production use.
 
 Superset metadata backup/restore local smoke:
 

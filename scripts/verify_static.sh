@@ -14,6 +14,19 @@ grep -q "REDPANDA_IMAGE=redpandadata/redpanda:v26.1.10" versions.env
 grep -q "REDPANDA_PROTOCOL_CONTRACT=kafka-api" versions.env
 grep -q "REDPANDA_TOPIC_ANALYTICS_EVENTS=emsi.analytics.events.v1" versions.env
 grep -q "APACHE_KAFKA_STATUS=rollback-certification" versions.env
+grep -q "CLICKHOUSE_IMAGE=clickhouse/clickhouse-server:25.8.24.21" versions.env
+grep -q "CLICKHOUSE_IMAGE_DIGEST=sha256:0fa332a9a05ce4138b16d883f9c9d124c8d9d81cf4e52046878d537558626e49" versions.env
+grep -q "CLICKHOUSE_IMAGE_STATUS=candidate-local-smoke" versions.env
+grep -q "CLICKHOUSE_SECURITY_SCAN_STATUS=pending-local-vulnerability-scan" versions.env
+grep -q "CLICKHOUSE_PRODUCTION_STATUS=blocked-pending-topology-security-governance-restore-owner-approval" versions.env
+test -f sql/clickhouse-init/010_hot_analytics.sql
+grep -q "ENGINE = MergeTree" sql/clickhouse-init/010_hot_analytics.sql
+grep -q "ENGINE = SummingMergeTree" sql/clickhouse-init/010_hot_analytics.sql
+grep -q "profiles: \\[\"hot-analytics\"\\]" docker-compose.yml
+test -x scripts/run_clickhouse_candidate_smoke.sh
+test -f ingest_worker/clickhouse_candidate_smoke.py
+grep -q "clickhouse-candidate-smoke" docker-compose.yml
+grep -q "ingest_worker.clickhouse_candidate_smoke" docker-compose.yml
 grep -q "KAFKA_PYTHON_VERSION=3.0.2" versions.env
 grep -q "INGEST_POSTGRES_DRIVER=psycopg2-binary==2.9.12" versions.env
 grep -q "kafka-python==3.0.2" pyproject.toml
@@ -49,10 +62,15 @@ if grep -R "payload_preview\\|raw_payload" ingest_worker sql docker-compose.yml;
   exit 1
 fi
 
+if grep -R "clickhouse/clickhouse-server:latest\\|clickhouse/clickhouse-server:head" versions.env docker-compose.yml; then
+  echo "unpinned ClickHouse image found" >&2
+  exit 1
+fi
+
 if [ "${SKIP_DOCKER_CONFIG:-0}" = "1" ]; then
   echo "skipped docker compose config parse because SKIP_DOCKER_CONFIG=1" >&2
 elif command -v docker >/dev/null 2>&1; then
-  docker compose --env-file versions.env --profile local --profile streaming --profile observability --profile evidence --profile object-storage config >/dev/null
+  docker compose --env-file versions.env --profile local --profile streaming --profile observability --profile evidence --profile object-storage --profile hot-analytics --profile hot-analytics-smoke config >/dev/null
   docker compose --env-file versions.env -f docker-compose.yml -f docker-compose.superset-postgres-metadata.yml --profile superset config >/dev/null
 else
   echo "docker not found; skipped docker compose config parse" >&2

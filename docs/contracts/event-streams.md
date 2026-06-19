@@ -107,6 +107,26 @@ Status: Phase D local-dev dbt/Soda/Dagster smoke implemented.
   readiness still requires owner-approved source windows, thresholds, retention,
   and privacy/legal review.
 
+## ClickHouse Candidate Sink Status
+
+Status: Phase E local-dev candidate smoke implemented.
+
+- ClickHouse is an optional hot analytics candidate, not the canonical
+  warehouse.
+- The local candidate path is fed from the approved warehouse export boundary:
+  `analytics.raw_event_landing` after the ingest worker has landed accepted
+  events in PostgreSQL.
+- The candidate event table carries bounded event metadata and hashes:
+  `event_id`, event name/version, timestamps, producer, privacy class,
+  `subject_user_hash`, `payload_sha256`, `raw_record_sha256`, source offset
+  metadata, and landing timestamp.
+- Raw `subject` and `payload` JSON are not copied into ClickHouse.
+- The local smoke compares the same hourly aggregate in PostgreSQL and
+  ClickHouse and prints local timing for the bounded workload. That timing is
+  not production adoption evidence.
+- Disable the candidate by leaving the `hot-analytics` profile stopped; the
+  canonical PostgreSQL/dbt/Soda/Dagster path continues to work.
+
 ## Production Blockers
 
 - TLS, SASL, ACLs, and secret rotation.
@@ -114,4 +134,5 @@ Status: Phase D local-dev dbt/Soda/Dagster smoke implemented.
 - Topic retention, partition sizing, and replay policy.
 - DLQ review, replay runbook, and failure ownership.
 - Monitoring, alerting, and runbook evidence.
-- License/security review and owner approval.
+- License/security review and owner approval for Redpanda, ClickHouse, BI, and
+  evidence-hosting images.

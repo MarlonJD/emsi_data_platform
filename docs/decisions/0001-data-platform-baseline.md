@@ -107,6 +107,29 @@ partition sizing, DLQ/replay policy, monitoring, backup/replay drills,
 license/security review, and owner approval are blocked before production
 acceptance.
 
+### ClickHouse
+
+Status: local-dev candidate
+
+- Candidate image: `clickhouse/clickhouse-server:25.8.24.21`.
+- Recorded manifest digest:
+  `sha256:0fa332a9a05ce4138b16d883f9c9d124c8d9d81cf4e52046878d537558626e49`.
+- Architecture digests are recorded in [versions.env](../../versions.env) for
+  the local candidate tag.
+- License evidence records ClickHouse core as Apache 2.0; this does not replace
+  EMSI vulnerability, license, provenance, retention, backup/restore, or owner
+  approval gates.
+- The optional `hot-analytics` profile keeps ClickHouse off the default stack
+  and does not expose host ports by default.
+- The Phase E local smoke feeds ClickHouse from
+  `analytics.raw_event_landing`, copying only bounded event metadata and hashes,
+  then compares hourly aggregates with PostgreSQL for the same bounded rows.
+
+Production gap: ClickHouse is not a baseline warehouse and not a production
+sink. Production acceptance would require measured need, topology/security
+review, data retention policy, replay or restore evidence, scan/provenance
+approval, monitoring, and owner acceptance.
+
 ### Soda
 
 Status: local-dev
@@ -205,6 +228,7 @@ storage; helper-only for DuckDB
 | datavault4dbt | baseline | AutomateDV stays separate. |
 | Redpanda | local-dev candidate | Kafka API contract; production acceptance blocked. |
 | Apache Kafka | rollback/certification | Compatibility and managed-service lane, not first local baseline. |
+| ClickHouse | local-dev candidate | Optional hot analytics smoke only; PostgreSQL remains canonical. |
 | Soda v4 | local-dev | Self-hosted runner only; production DQ readiness blocked. |
 | Superset | local-dev candidate | PostgreSQL supported; selected official image needs driver add-on. |
 | Grafana | local-dev | Observability/DQ dashboard starting point. |

@@ -85,6 +85,33 @@ This remains local-dev integration evidence. It does not prove production DQ
 readiness, retention, owner approval, or production source-bound target-window
 quality.
 
+## ClickHouse Hot Analytics Candidate
+
+Run this only as an optional Phase E candidate smoke:
+
+```sh
+./scripts/run_clickhouse_candidate_smoke.sh
+```
+
+The script reruns the ingest smoke first, then starts `analytics-postgres` and
+the `clickhouse` service under the `hot-analytics` profile. ClickHouse is not
+published on a host port by default; the smoke reaches it on the Compose
+network. The runner creates the candidate schema idempotently, exports bounded
+columns from `analytics.raw_event_landing`, loads the local ClickHouse
+`MergeTree` event table, refreshes the hourly `SummingMergeTree` aggregate, and
+compares the aggregate result with the same PostgreSQL query.
+
+This is candidate evidence only:
+
+- PostgreSQL remains canonical for landing, dbt, Data Vault, Soda, and Dagster.
+- ClickHouse stores hashes and bounded event metadata, not raw `subject` or
+  `payload` JSON.
+- The benchmark output is local and bounded; it does not prove production need,
+  retention readiness, backup/restore safety, or source-bound quality.
+- Roll back by stopping the `hot-analytics` profile or leaving
+  `./scripts/run_clickhouse_candidate_smoke.sh` unrun; canonical analytics
+  PostgreSQL remains unaffected.
+
 ## EMSI Go API Integration
 
 From the EMSI monorepo parent, the backend opt-in target starts this
@@ -138,6 +165,8 @@ Passed by local runtime only when run successfully:
 - Dagster can execute `phase_d_local_smoke_job` for the local ingest/dbt/Soda
   flow.
 - Superset metadata backup/restore smoke passes against PostgreSQL metadata DB.
+- ClickHouse candidate smoke can load bounded landing rows and match the
+  PostgreSQL hourly aggregate when the optional `hot-analytics` profile is run.
 
 Skipped by default:
 
@@ -145,6 +174,8 @@ Skipped by default:
 - License review.
 - Registry provenance and digest promotion.
 - Production backup/restore drills.
+- ClickHouse production topology, vulnerability scan, retention, backup/restore,
+  and owner approval.
 - Production DQ readiness and source-bound target-window checks.
 - Evidence.dev production hosting audit.
 
