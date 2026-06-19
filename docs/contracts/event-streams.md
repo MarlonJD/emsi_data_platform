@@ -50,6 +50,27 @@ The first event envelope is intentionally small and source-agnostic:
   staging tables.
 - Local topic creation is not production readiness evidence.
 
+## EMSI Go API Producer Status
+
+Status: Phase B local-dev producer implemented, consumer not yet implemented.
+
+- `ANALYTICS_EVENT_PUBLISHER=disabled|outbox|kafka` gates the backend producer.
+- `kafka` mode publishes best-effort envelopes to
+  `ANALYTICS_EVENT_TOPIC` using Kafka API semantics.
+- `ANALYTICS_KAFKA_BOOTSTRAP_SERVERS=redpanda:9092` is the Compose-network
+  local-dev setting; host tools can use `localhost:19092`.
+- Authenticated user-scoped optional analytics are suppressed when
+  `share_analytics` is disabled or preference reads are unavailable.
+- Authenticated REST analytics events bind the event subject to the
+  server-derived pseudonymous `user_hash` for the bearer session; request body
+  hash values are not trusted for Kafka publishing.
+- The Go API still writes accepted analytics events to its legacy
+  `analytics.events` table for compatibility until the data-platform ingest
+  worker and PostgreSQL landing path are implemented.
+- Payload keys that look like raw subject identifiers, such as `user_id`,
+  `userId`, `actor_user_id`, `actorUserId`, `email`, `phone`, `authorization`,
+  or `token`, are rejected before Kafka publish.
+
 ## Production Blockers
 
 - TLS, SASL, ACLs, and secret rotation.

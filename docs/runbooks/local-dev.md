@@ -39,6 +39,28 @@ Baseline topics:
 Local host clients can use `localhost:19092`. Compose-network clients should
 use `redpanda:9092`.
 
+## EMSI Go API Integration
+
+From the EMSI monorepo parent, the backend opt-in target starts this
+data-platform core plus the Go API:
+
+```sh
+cd backend/go-api
+make docker-data-platform
+```
+
+The backend target uses this Compose project network
+(`emsi-data-platform_default`) so the API container can publish to
+`redpanda:9092`. It starts only `analytics-postgres`, `dagster-postgres`,
+`redpanda`, and `redpanda-topic-init` on the data-platform side. Superset,
+Grafana, Evidence.dev, SeaweedFS, and ClickHouse stay opt-in.
+
+This is local-dev integration evidence only. The Go API still writes accepted
+analytics events to its legacy `analytics.events` table while it also publishes
+best-effort Kafka envelopes when `ANALYTICS_EVENT_PUBLISHER=kafka`. The
+canonical analytics warehouse remains PostgreSQL; ClickHouse remains
+candidate-only hot analytics until measured need and production gates exist.
+
 ## Optional Profiles
 
 ```sh
