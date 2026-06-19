@@ -17,6 +17,28 @@ Core services:
 - `dbt-runner`: on-demand dbt container.
 - `soda-runner`: on-demand self-hosted Soda v4 container.
 
+## Event Streaming Profile
+
+```sh
+docker compose --env-file versions.env --env-file .env --profile streaming up redpanda redpanda-topic-init
+```
+
+Streaming services:
+
+- `redpanda`: local-dev/candidate event broker using the Kafka API contract.
+- `redpanda-topic-init`: idempotent local topic creation for baseline streams.
+
+Baseline topics:
+
+- `emsi.analytics.events.v1`: accepted analytics event envelope.
+- `emsi.analytics.events.dlq.v1`: failed or rejected analytics events for
+  local replay/debugging.
+- `emsi.product.events.v1`: product-domain event stream candidate for future
+  ingest separation.
+
+Local host clients can use `localhost:19092`. Compose-network clients should
+use `redpanda:9092`.
+
 ## Optional Profiles
 
 ```sh
@@ -31,6 +53,8 @@ docker compose --env-file versions.env --env-file .env -f docker-compose.yml -f 
 Passed by local runtime only when run successfully:
 
 - Compose config parses for the selected profile.
+- Redpanda starts and baseline topics are created when the `streaming` profile
+  is run.
 - PostgreSQL containers become healthy.
 - Dagster webserver starts against its own metadata database.
 - dbt dependencies resolve and `dbt debug` can connect to analytics Postgres.

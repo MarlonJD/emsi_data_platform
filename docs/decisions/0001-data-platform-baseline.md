@@ -75,6 +75,32 @@ Status: baseline for `datavault4dbt`; candidate/watch for AutomateDV
 Production gap: no production Raw Vault, Business Vault, marts, or feature-store
 models are accepted by this scaffold alone.
 
+### Event Streaming
+
+Status: local-dev candidate for Redpanda; rollback/certification for Apache
+Kafka
+
+- Local-dev broker image: `redpandadata/redpanda:v26.1.10`.
+- Protocol contract: Kafka API.
+- Redpanda is selected for the local-dev/candidate event backbone because it
+  gives the project a compact single-binary broker for developer workflows while
+  keeping producer and consumer code on the Kafka protocol boundary.
+- Apache Kafka is not the first local baseline here. It remains the
+  rollback/certification lane for ecosystem compatibility, managed service
+  requirements, and customer/platform constraints.
+- Application services publish events to the stream boundary. Data-platform
+  consumers land accepted events into analytics PostgreSQL. Application services
+  do not write directly into the analytics warehouse.
+- Baseline local topics:
+  - `emsi.analytics.events.v1`
+  - `emsi.analytics.events.dlq.v1`
+  - `emsi.product.events.v1`
+
+Production gap: TLS, SASL, ACLs, schema compatibility policy, topic retention,
+partition sizing, DLQ/replay policy, monitoring, backup/replay drills,
+license/security review, and owner approval are blocked before production
+acceptance.
+
 ### Soda
 
 Status: local-dev
@@ -168,6 +194,8 @@ storage; helper-only for DuckDB
 | Dagster | local-dev | Dedicated metadata database, not product OLTP credentials. |
 | dbt 1.11 | baseline | dbt Core 2/Fusion is candidate/watch only. |
 | datavault4dbt | baseline | AutomateDV stays separate. |
+| Redpanda | local-dev candidate | Kafka API contract; production acceptance blocked. |
+| Apache Kafka | rollback/certification | Compatibility and managed-service lane, not first local baseline. |
 | Soda v4 | local-dev | Self-hosted runner only; production DQ readiness blocked. |
 | Superset | local-dev candidate | PostgreSQL supported; selected official image needs driver add-on. |
 | Grafana | local-dev | Observability/DQ dashboard starting point. |

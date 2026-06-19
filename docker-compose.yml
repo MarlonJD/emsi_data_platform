@@ -146,6 +146,86 @@ services:
       - ./soda:/workspace/soda:ro
     command: ["sleep", "infinity"]
 
+  redpanda:
+    image: ${REDPANDA_IMAGE:-redpandadata/redpanda:v26.1.10}
+    profiles: ["streaming"]
+    command:
+      - redpanda
+      - start
+      - --mode
+      - dev-container
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr
+      - internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr
+      - 0.0.0.0:33145
+      - --advertise-rpc-addr
+      - redpanda:33145
+    ports:
+      - "19092:19092"
+      - "18081:18081"
+      - "18082:18082"
+      - "19644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info --brokers=localhost:9092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redpanda-topic-init:
+    image: ${REDPANDA_IMAGE:-redpandadata/redpanda:v26.1.10}
+    profiles: ["streaming"]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      REDPANDA_BOOTSTRAP_SERVERS: ${REDPANDA_BOOTSTRAP_SERVERS:-redpanda:9092}
+      REDPANDA_TOPIC_ANALYTICS_EVENTS: ${REDPANDA_TOPIC_ANALYTICS_EVENTS:-emsi.analytics.events.v1}
+      REDPANDA_TOPIC_ANALYTICS_DLQ: ${REDPANDA_TOPIC_ANALYTICS_DLQ:-emsi.analytics.events.dlq.v1}
+      REDPANDA_TOPIC_PRODUCT_EVENTS: ${REDPANDA_TOPIC_PRODUCT_EVENTS:-emsi.product.events.v1}
+      REDPANDA_ANALYTICS_EVENTS_PARTITIONS: ${REDPANDA_ANALYTICS_EVENTS_PARTITIONS:-6}
+      REDPANDA_DLQ_PARTITIONS: ${REDPANDA_DLQ_PARTITIONS:-3}
+      REDPANDA_PRODUCT_EVENTS_PARTITIONS: ${REDPANDA_PRODUCT_EVENTS_PARTITIONS:-6}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        set -eu
+
+        create_topic() {
+          topic="$$1"
+          partitions="$$2"
+          if rpk topic describe "$$topic" --brokers "$${REDPANDA_BOOTSTRAP_SERVERS}" >/dev/null 2>&1; then
+            echo "topic exists: $$topic"
+          else
+            rpk topic create "$$topic" --brokers "$${REDPANDA_BOOTSTRAP_SERVERS}" --partitions "$$partitions" --replicas 1
+          fi
+        }
+
+        create_topic "$${REDPANDA_TOPIC_ANALYTICS_EVENTS}" "$${REDPANDA_ANALYTICS_EVENTS_PARTITIONS}"
+        create_topic "$${REDPANDA_TOPIC_ANALYTICS_DLQ}" "$${REDPANDA_DLQ_PARTITIONS}"
+        create_topic "$${REDPANDA_TOPIC_PRODUCT_EVENTS}" "$${REDPANDA_PRODUCT_EVENTS_PARTITIONS}"
+        rpk topic list --brokers "$${REDPANDA_BOOTSTRAP_SERVERS}"
+
   grafana:
     image: ${GRAFANA_IMAGE:-grafana/grafana:13.0.2}
     profiles: ["observability"]
@@ -182,5 +262,6 @@ services:
 volumes:
   analytics_postgres_data:
   dagster_postgres_data:
+  redpanda_data:
   grafana_data:
   seaweedfs_data:

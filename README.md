@@ -23,6 +23,8 @@ deployment review.
 - Dagster: `1.13.9` with `dagster-postgres==0.29.9` and `dagster-dbt==0.29.9`.
 - dbt: `dbt-core==1.11.11`, `dbt-postgres==1.10.1`.
 - Data Vault: `ScalefreeCOM/datavault4dbt==1.18.3`.
+- Event streaming: `redpandadata/redpanda:v26.1.10` as a local-dev candidate
+  broker, with Kafka API as the protocol contract.
 - Soda v4: `soda-core==4.14.0`, `soda-postgres==4.14.0`.
 - Superset: `apache/superset:6.1.0` plus a narrow local custom image that adds
   `psycopg2-binary==2.9.10` for PostgreSQL metadata storage.
@@ -53,11 +55,19 @@ docker compose --env-file versions.env --env-file .env --profile local run --rm 
 Optional BI and observability profiles:
 
 ```sh
+docker compose --env-file versions.env --env-file .env --profile streaming up redpanda redpanda-topic-init
 docker compose --env-file versions.env --env-file .env --profile observability up grafana
 docker compose --env-file versions.env --env-file .env --profile evidence up --build evidence
 docker compose --env-file versions.env --env-file .env --profile object-storage up seaweedfs
 docker compose --env-file versions.env --env-file .env -f docker-compose.yml -f docker-compose.superset-postgres-metadata.yml --profile superset up --build
 ```
+
+Redpanda is the local-dev/candidate event backbone. Producers and consumers
+should target the Kafka API contract, not Redpanda-specific APIs, so Apache
+Kafka remains a rollback/certification lane. Runtime services should publish
+events to the stream boundary; data-platform consumers land accepted events into
+analytics Postgres. Application services must not write directly into the
+warehouse.
 
 Superset metadata backup/restore local smoke:
 
