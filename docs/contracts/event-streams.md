@@ -52,7 +52,8 @@ The first event envelope is intentionally small and source-agnostic:
 
 ## EMSI Go API Producer Status
 
-Status: Phase B local-dev producer implemented, consumer not yet implemented.
+Status: Phase B local-dev producer implemented; Phase C local-dev consumer
+smoke passed.
 
 - `ANALYTICS_EVENT_PUBLISHER=disabled|outbox|kafka` gates the backend producer.
 - `kafka` mode publishes best-effort envelopes to
@@ -65,11 +66,30 @@ Status: Phase B local-dev producer implemented, consumer not yet implemented.
   server-derived pseudonymous `user_hash` for the bearer session; request body
   hash values are not trusted for Kafka publishing.
 - The Go API still writes accepted analytics events to its legacy
-  `analytics.events` table for compatibility until the data-platform ingest
-  worker and PostgreSQL landing path are implemented.
+  `analytics.events` table for compatibility while the data-platform ingest
+  worker and downstream dbt/Soda/Dagster gates mature.
 - Payload keys that look like raw subject identifiers, such as `user_id`,
   `userId`, `actor_user_id`, `actorUserId`, `email`, `phone`, `authorization`,
   or `token`, are rejected before Kafka publish.
+
+## Data-Platform Consumer Status
+
+Status: Phase C local-dev ingest worker implemented; runtime smoke passed.
+
+- `analytics-ingest-worker` consumes `emsi.analytics.events.v1` through Kafka
+  API semantics and lands accepted records in
+  `analytics.raw_event_landing`.
+- Accepted events are deduplicated by `event_id`.
+- Invalid events are recorded in `analytics.raw_event_dlq` and published to
+  `emsi.analytics.events.dlq.v1` as bounded metadata. Raw payload bodies are
+  not stored in the DLQ table or DLQ event.
+- `analytics.event_ingest_checkpoints` stores last processed offsets by
+  consumer group/topic/partition.
+- `analytics.event_ingest_metrics` stores accepted/rejected counts, last
+  processed offset, and observed consumer lag.
+- `scripts/run_ingest_smoke.sh` publishes one valid synthetic envelope and one
+  malformed envelope, then checks that the valid event lands once and the
+  malformed event reaches the DLQ.
 
 ## Production Blockers
 

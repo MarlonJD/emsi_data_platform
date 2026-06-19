@@ -27,6 +27,9 @@ Streaming services:
 
 - `redpanda`: local-dev/candidate event broker using the Kafka API contract.
 - `redpanda-topic-init`: idempotent local topic creation for baseline streams.
+- `analytics-ingest-worker`: local-dev consumer that lands accepted analytics
+  envelopes into analytics PostgreSQL and routes invalid events to bounded DLQ
+  metadata.
 
 Baseline topics:
 
@@ -38,6 +41,21 @@ Baseline topics:
 
 Local host clients can use `localhost:19092`. Compose-network clients should
 use `redpanda:9092`.
+
+Run the deterministic ingest smoke:
+
+```sh
+./scripts/run_ingest_smoke.sh
+```
+
+The smoke creates `.env` from `.env.example` if needed, starts
+`analytics-postgres`, `redpanda`, `redpanda-topic-init`, and
+`analytics-ingest-worker`, publishes the same valid synthetic event twice plus
+malformed events, restarts the worker, then verifies:
+
+- the valid event appears exactly once in `analytics.raw_event_landing`;
+- the malformed event appears in `analytics.raw_event_dlq`;
+- ingest checkpoint rows exist.
 
 ## EMSI Go API Integration
 
@@ -52,14 +70,16 @@ make docker-data-platform
 The backend target uses this Compose project network
 (`emsi-data-platform_default`) so the API container can publish to
 `redpanda:9092`. It starts only `analytics-postgres`, `dagster-postgres`,
-`redpanda`, and `redpanda-topic-init` on the data-platform side. Superset,
-Grafana, Evidence.dev, SeaweedFS, and ClickHouse stay opt-in.
+  `redpanda`, `redpanda-topic-init`, and `analytics-ingest-worker` on the
+  data-platform side. Superset, Grafana, Evidence.dev, SeaweedFS, and
+  ClickHouse stay opt-in.
 
 This is local-dev integration evidence only. The Go API still writes accepted
 analytics events to its legacy `analytics.events` table while it also publishes
 best-effort Kafka envelopes when `ANALYTICS_EVENT_PUBLISHER=kafka`. The
-canonical analytics warehouse remains PostgreSQL; ClickHouse remains
-candidate-only hot analytics until measured need and production gates exist.
+local ingest worker lands Kafka envelopes into canonical analytics PostgreSQL
+landing tables for local verification. ClickHouse remains candidate-only hot
+analytics until measured need and production gates exist.
 
 ## Optional Profiles
 
@@ -77,6 +97,9 @@ Passed by local runtime only when run successfully:
 - Compose config parses for the selected profile.
 - Redpanda starts and baseline topics are created when the `streaming` profile
   is run.
+- A synthetic event lands once in `analytics.raw_event_landing`, a malformed
+  event lands in `analytics.raw_event_dlq`, and worker restart does not create
+  duplicate accepted rows.
 - PostgreSQL containers become healthy.
 - Dagster webserver starts against its own metadata database.
 - dbt dependencies resolve and `dbt debug` can connect to analytics Postgres.

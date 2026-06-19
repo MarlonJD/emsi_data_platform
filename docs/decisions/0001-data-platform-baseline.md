@@ -95,6 +95,9 @@ Kafka
   - `emsi.analytics.events.v1`
   - `emsi.analytics.events.dlq.v1`
   - `emsi.product.events.v1`
+- The local-dev ingest worker consumes `emsi.analytics.events.v1`, writes
+  accepted records to PostgreSQL `analytics.raw_event_landing`, and records
+  invalid records as bounded DLQ metadata without storing raw payload bodies.
 
 Production gap: TLS, SASL, ACLs, schema compatibility policy, topic retention,
 partition sizing, DLQ/replay policy, monitoring, backup/replay drills,

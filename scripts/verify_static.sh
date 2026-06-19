@@ -12,8 +12,15 @@ grep -q "REDPANDA_IMAGE=redpandadata/redpanda:v26.1.10" versions.env
 grep -q "REDPANDA_PROTOCOL_CONTRACT=kafka-api" versions.env
 grep -q "REDPANDA_TOPIC_ANALYTICS_EVENTS=emsi.analytics.events.v1" versions.env
 grep -q "APACHE_KAFKA_STATUS=rollback-certification" versions.env
+grep -q "KAFKA_PYTHON_VERSION=3.0.2" versions.env
+grep -q "INGEST_POSTGRES_DRIVER=psycopg2-binary==2.9.12" versions.env
+grep -q "kafka-python==3.0.2" pyproject.toml
+grep -q "psycopg2-binary==2.9.12" pyproject.toml
 grep -q "psycopg2-binary==2.9.10" docker/superset/requirements-postgres-metadata.txt
 grep -q "ScalefreeCOM/datavault4dbt" dbt/packages.yml
+
+PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
+  python3 -m py_compile dagster_project/*.py ingest_worker/*.py
 
 if grep -R "soda-core-postgres" docker dbt dagster_project soda pyproject.toml docker-compose.yml docker-compose.superset-postgres-metadata.yml; then
   echo "legacy Soda v3 package found in runnable scaffold" >&2
@@ -22,6 +29,11 @@ fi
 
 if grep -n "/var/lib/postgresql/data" docker-compose.yml docker-compose.superset-postgres-metadata.yml; then
   echo "legacy PostgreSQL data mount found in compose files" >&2
+  exit 1
+fi
+
+if grep -R "payload_preview\\|raw_payload" ingest_worker sql docker-compose.yml; then
+  echo "raw DLQ payload storage found in ingest path" >&2
   exit 1
 fi
 

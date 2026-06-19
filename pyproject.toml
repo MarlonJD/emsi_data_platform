@@ -10,6 +10,8 @@ dependencies = [
   "dagster-dbt==0.29.9",
   "dbt-core==1.11.11",
   "dbt-postgres==1.10.1",
+  "kafka-python==3.0.2",
+  "psycopg2-binary==2.9.12",
 ]
 
 [tool.dagster]

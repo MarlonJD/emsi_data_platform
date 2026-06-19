@@ -56,6 +56,7 @@ Optional BI and observability profiles:
 
 ```sh
 docker compose --env-file versions.env --env-file .env --profile streaming up redpanda redpanda-topic-init
+docker compose --env-file versions.env --env-file .env --profile streaming up -d analytics-ingest-worker
 docker compose --env-file versions.env --env-file .env --profile observability up grafana
 docker compose --env-file versions.env --env-file .env --profile evidence up --build evidence
 docker compose --env-file versions.env --env-file .env --profile object-storage up seaweedfs
@@ -68,6 +69,20 @@ Kafka remains a rollback/certification lane. Runtime services should publish
 events to the stream boundary; data-platform consumers land accepted events into
 analytics Postgres. Application services must not write directly into the
 warehouse.
+
+Run the local ingest smoke after the streaming profile is available:
+
+```sh
+./scripts/run_ingest_smoke.sh
+```
+
+The smoke generates a per-run event id, publishes the same valid synthetic
+analytics envelope twice, publishes malformed envelopes, restarts the worker,
+and checks again. The ingest worker lands the valid event once in
+`analytics.raw_event_landing`, routes malformed events to
+`analytics.raw_event_dlq` with bounded metadata only, and updates checkpoint and
+metric rows. The DLQ path stores hashes, sizes, event ids, and error codes; it
+does not store raw payload bodies.
 
 Superset metadata backup/restore local smoke:
 

@@ -226,6 +226,75 @@ services:
         create_topic "$${REDPANDA_TOPIC_PRODUCT_EVENTS}" "$${REDPANDA_PRODUCT_EVENTS_PARTITIONS}"
         rpk topic list --brokers "$${REDPANDA_BOOTSTRAP_SERVERS}"
 
+  analytics-ingest-worker:
+    build:
+      context: .
+      dockerfile: docker/ingest/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        KAFKA_PYTHON_VERSION: ${KAFKA_PYTHON_VERSION:-3.0.2}
+        PSYCOPG2_BINARY_VERSION: ${PSYCOPG2_BINARY_VERSION:-2.9.12}
+    profiles: ["streaming"]
+    depends_on:
+      analytics-postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      redpanda-topic-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${REDPANDA_BOOTSTRAP_SERVERS:-redpanda:9092}
+      ANALYTICS_EVENT_TOPIC: ${REDPANDA_TOPIC_ANALYTICS_EVENTS:-emsi.analytics.events.v1}
+      ANALYTICS_EVENT_DLQ_TOPIC: ${REDPANDA_TOPIC_ANALYTICS_DLQ:-emsi.analytics.events.dlq.v1}
+      ANALYTICS_POSTGRES_HOST: analytics-postgres
+      ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+      INGEST_CONSUMER_GROUP: ${INGEST_CONSUMER_GROUP:-emsi-data-platform-ingest-local}
+
+  analytics-ingest-smoke-producer:
+    build:
+      context: .
+      dockerfile: docker/ingest/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        KAFKA_PYTHON_VERSION: ${KAFKA_PYTHON_VERSION:-3.0.2}
+        PSYCOPG2_BINARY_VERSION: ${PSYCOPG2_BINARY_VERSION:-2.9.12}
+    profiles: ["smoke"]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redpanda-topic-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${REDPANDA_BOOTSTRAP_SERVERS:-redpanda:9092}
+      ANALYTICS_EVENT_TOPIC: ${REDPANDA_TOPIC_ANALYTICS_EVENTS:-emsi.analytics.events.v1}
+      SMOKE_EVENT_ID: ${SMOKE_EVENT_ID:-local-dev-smoke-event-v1}
+      SMOKE_INVALID_EVENT_ID: ${SMOKE_INVALID_EVENT_ID:-local-dev-smoke-invalid-v1}
+    command: ["python", "-m", "ingest_worker.smoke_producer"]
+
+  analytics-ingest-smoke-check:
+    build:
+      context: .
+      dockerfile: docker/ingest/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12.13-slim-bookworm}
+        KAFKA_PYTHON_VERSION: ${KAFKA_PYTHON_VERSION:-3.0.2}
+        PSYCOPG2_BINARY_VERSION: ${PSYCOPG2_BINARY_VERSION:-2.9.12}
+    profiles: ["smoke"]
+    depends_on:
+      analytics-postgres:
+        condition: service_healthy
+    environment:
+      ANALYTICS_POSTGRES_HOST: analytics-postgres
+      ANALYTICS_POSTGRES_DB: ${ANALYTICS_POSTGRES_DB:-analytics}
+      ANALYTICS_POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
+      ANALYTICS_POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
+      SMOKE_EVENT_ID: ${SMOKE_EVENT_ID:-local-dev-smoke-event-v1}
+      SMOKE_INVALID_EVENT_ID: ${SMOKE_INVALID_EVENT_ID:-local-dev-smoke-invalid-v1}
+      SMOKE_CHECK_ATTEMPTS: ${SMOKE_CHECK_ATTEMPTS:-90}
+    command: ["python", "-m", "ingest_worker.smoke_check"]
+
   grafana:
     image: ${GRAFANA_IMAGE:-grafana/grafana:13.0.2}
     profiles: ["observability"]
