@@ -1,0 +1,21 @@
+# Local runtime outputs
+.dagster/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Data and generated artifacts stay outside git.
+data/
+artifacts/
+exports/
+*.duckdb
+*.parquet
+*.csv
+*.jsonl
+
+# Local environment
+.env
+.env.*
+!.env.example
+.venv/
+venv/
