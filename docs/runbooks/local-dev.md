@@ -136,6 +136,43 @@ local ingest worker lands Kafka envelopes into canonical analytics PostgreSQL
 landing tables for local verification. ClickHouse remains candidate-only hot
 analytics until measured need and production gates exist.
 
+### Four-Platform Event Intake First Smoke
+
+The first EMSI app-originated event smoke is local-dev only. Native clients do
+not write directly to Kafka, Redpanda, ClickHouse, or analytics PostgreSQL; they
+use Go API GraphQL mutations or documented REST compatibility routes:
+
+- Feed ML Home feed telemetry: GraphQL `recordFeedEvents`, compatibility
+  `POST /v2/feed/events`.
+- Auth/session/screen and bounded Admin usage analytics: GraphQL
+  `recordAppEvents`, compatibility `POST /v1/analytics/events`.
+
+Expected local path:
+
+```text
+native app -> Go API privacy gate -> Redpanda/Kafka API -> analytics-ingest-worker -> analytics.raw_event_landing -> dbt/Soda/Dagster local smoke
+```
+
+For headless evidence, run the targeted platform/backend tests from the EMSI
+monorepo first, then run:
+
+```sh
+./scripts/run_ingest_smoke.sh
+./scripts/run_phase_d_smoke.sh
+```
+
+Screenshot-like or manual QA evidence, when required, belongs outside the main
+repository under:
+
+```text
+MarlonJD/emsi_qa/data-platform/four-platform-event-intake-smoke/<YYYYMMDD>/<platform>/
+```
+
+This smoke may prove local event construction, Go API acceptance/rejection,
+Kafka publish, landing, and local dbt/Soda/Dagster checks. It does not prove
+production source windows, retention approval, production Feed ML readiness,
+model serving, rollout approval, ClickHouse adoption, or owner approval.
+
 ## Optional Profiles
 
 ```sh

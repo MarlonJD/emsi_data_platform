@@ -53,7 +53,8 @@ The first event envelope is intentionally small and source-agnostic:
 ## EMSI Go API Producer Status
 
 Status: Phase B local-dev producer implemented; Phase C local-dev consumer
-smoke passed.
+smoke passed. Four-platform app event intake is local-dev first-smoke scope
+only; it is not production approval.
 
 - `ANALYTICS_EVENT_PUBLISHER=disabled|outbox|kafka` gates the backend producer.
 - `kafka` mode publishes best-effort envelopes to
@@ -71,6 +72,33 @@ smoke passed.
 - Payload keys that look like raw subject identifiers, such as `user_id`,
   `userId`, `actor_user_id`, `actorUserId`, `email`, `phone`, `authorization`,
   or `token`, are rejected before Kafka publish.
+
+### Four-Platform Local-Dev First-Smoke Events
+
+The first app-originated smoke uses the Go API as the only publisher boundary:
+native clients call GraphQL `recordAppEvents`/`recordFeedEvents` or the
+documented REST compatibility routes, the backend re-checks preference gates,
+and accepted envelopes publish to `emsi.analytics.events.v1`.
+
+Allowed smoke families:
+
+- Feed ML Home feed telemetry: `feed_item_impression`,
+  `feed_item_viewable_impression`, `feed_item_open`, `feed_item_like`,
+  `feed_item_reply`, `feed_item_join`, `feed_item_share`,
+  `feed_item_copy_link`, `feed_item_hide`, `feed_item_show_less`,
+  `feed_item_not_interested`, `feed_item_mute_author`, and
+  `feed_item_mute_channel`.
+- Auth/session/screen analytics: `app_session_started`, `app_session_ended`,
+  and `screen_viewed`.
+- Admin Console usage/action-visibility analytics: `admin_surface_viewed` and
+  `admin_action_visibility_viewed`.
+
+Admin smoke payloads may contain only bounded surface/module/screen/action
+state fields and optional pseudonymous `target_hash`. Raw user ids, staff ids,
+emails, phones, support/contact reveal payloads, free-form notes, raw policy
+text, screenshots, full URLs, request/response bodies, auth tokens, and secrets
+are outside the contract. Required staff security/audit telemetry, if later
+approved, must use a separate stream or contract.
 
 ## Data-Platform Consumer Status
 
