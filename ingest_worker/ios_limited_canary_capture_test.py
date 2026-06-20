@@ -35,6 +35,60 @@ class IOSLimitedCanaryCaptureTest(unittest.TestCase):
             evidence["preflight"]["errors"],
         )
 
+    def test_preflight_rejects_fixture_placeholder_bundle(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_DP_CANARY_TARGET_NAME": "prod-ios-canary-a",
+                "EMSI_DP_CANARY_SEEDED_USER_REF": "seeded-ios-canary-001",
+                "EMSI_DP_CANARY_SUBJECT_USER_HASH": "a" * 64,
+                "EMSI_DP_CANARY_WAREHOUSE_DSN": (
+                    "postgres://analytics_reader:redacted@warehouse.example.com:5432/"
+                    "analytics?sslmode=verify-full"
+                ),
+                "EMSI_DP_CANARY_PRIVACY_ARTIFACT": "privacy-pref-check:2026-06-20:ar01",
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "EMSI_DP_CANARY_TARGET_NAME must not be a fixture or placeholder reference",
+            evidence["preflight"]["errors"],
+        )
+        self.assertIn(
+            "EMSI_DP_CANARY_SEEDED_USER_REF must not be a fixture or placeholder reference",
+            evidence["preflight"]["errors"],
+        )
+        self.assertIn(
+            "EMSI_DP_CANARY_SUBJECT_USER_HASH must not be a fixture or placeholder hash",
+            evidence["preflight"]["errors"],
+        )
+        self.assertIn(
+            "EMSI_DP_CANARY_WAREHOUSE_DSN must not use fixture or placeholder host/credentials",
+            evidence["preflight"]["errors"],
+        )
+        self.assertIn(
+            "EMSI_DP_CANARY_PRIVACY_ARTIFACT must not be a fixture placeholder",
+            evidence["preflight"]["errors"],
+        )
+
+    def test_preflight_rejects_template_secret_in_warehouse_dsn(self) -> None:
+        env = valid_preflight_env()
+        env["EMSI_DP_CANARY_WAREHOUSE_DSN"] = (
+            "postgresql://emsi_dp_canary_ro:<SECRET>@dp-warehouse-prod-ro.internal:5432/"
+            "emsi_analytics?sslmode=require&application_name=emsi-dp-ios-canary-preflight"
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "EMSI_DP_CANARY_WAREHOUSE_DSN must not use a template password",
+            evidence["preflight"]["errors"],
+        )
+
     def test_preflight_passes_with_required_production_inputs(self) -> None:
         with patch.dict(os.environ, valid_preflight_env(), clear=True):
             exit_code, evidence = capture.collect_evidence(preflight_only=True)
@@ -70,20 +124,26 @@ class IOSLimitedCanaryCaptureTest(unittest.TestCase):
 def valid_preflight_env() -> dict[str, str]:
     return {
         "EMSI_DP_CANARY_APPROVAL_ID": capture.APPROVAL_ID,
-        "EMSI_DP_CANARY_TARGET_NAME": "prod-ios-canary-a",
+        "EMSI_DP_CANARY_TARGET_NAME": "dp-ios-canary-p1a-prod-synth-01",
         "EMSI_DP_CANARY_TARGET_CLASS": "production",
-        "EMSI_DP_CANARY_SEEDED_USER_REF": "seeded-ios-canary-001",
-        "EMSI_DP_CANARY_SUBJECT_USER_HASH": "a" * 64,
+        "EMSI_DP_CANARY_SEEDED_USER_REF": "ios-canary-p1a-synth-01",
+        "EMSI_DP_CANARY_SUBJECT_USER_HASH": (
+            "2f1c4e6a8b0d3f5a7c9e1b4d6f8a0c2e"
+            "3f5a7c9e1b4d6f8a0c2e4f6a8b0d3f5a"
+        ),
         "EMSI_DP_CANARY_EVENT_ID_PREFIX": "ios-prod-canary-20260620-ar01",
         "EMSI_DP_CANARY_WINDOW_START": "2026-06-20T14:00:00Z",
         "EMSI_DP_CANARY_WINDOW_END": "2026-06-20T14:02:00Z",
         "EMSI_DP_CANARY_WAREHOUSE_DSN": (
-            "postgres://analytics_reader:redacted@warehouse.example.com:5432/"
+            "postgres://analytics_reader:reader_password@warehouse.emsi-prod.net:5432/"
             "analytics?sslmode=verify-full"
         ),
         "EMSI_DP_CANARY_SHARE_ANALYTICS": "true",
         "EMSI_DP_CANARY_PERSONALIZATION_ENABLED": "true",
-        "EMSI_DP_CANARY_PRIVACY_ARTIFACT": "privacy-pref-check:2026-06-20:ar01",
+        "EMSI_DP_CANARY_PRIVACY_ARTIFACT": (
+            "privacy-evidence/emsi-dp/p1a/ios-canary/20260620/"
+            "ios-canary-p1a-synth-01-consent-v1.json"
+        ),
     }
 
 

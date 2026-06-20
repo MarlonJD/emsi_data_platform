@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 
 APPROVAL_ID = "EMSI-DP-P1A-IOS-CANARY-20260620-AR01"
@@ -76,6 +77,21 @@ LOCAL_DSN_MARKERS = (
     "analytics_local_password",
     "postgres://emsi:emsi@",
 )
+PLACEHOLDER_REF_VALUES = {
+    "prod-ios-canary-a",
+    "seeded-ios-canary-001",
+    "privacy-pref-check:2026-06-20:ar01",
+}
+PLACEHOLDER_MARKERS = ("example", "fixture", "placeholder", "dummy", "redacted")
+TEMPLATE_SECRET_VALUES = {
+    "<secret>",
+    "<password>",
+    "changeme",
+    "password",
+    "replace-me",
+    "replace_me",
+    "secret",
+}
 
 CHECK_STATUSES = {"passed", "failed", "blocked", "skipped"}
 SAFE_REF_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+$")
@@ -223,6 +239,10 @@ def load_config(preflight_only: bool) -> tuple[CanaryConfig, list[str], list[str
         errors.append(
             "EMSI_DP_CANARY_SUBJECT_USER_HASH must be a pseudonymous 64-hex hash"
         )
+    elif is_placeholder_hash(subject_user_hash):
+        errors.append(
+            "EMSI_DP_CANARY_SUBJECT_USER_HASH must not be a fixture or placeholder hash"
+        )
 
     event_id_prefix = env("EMSI_DP_CANARY_EVENT_ID_PREFIX")
     validate_safe_ref("EMSI_DP_CANARY_EVENT_ID_PREFIX", event_id_prefix, errors)
@@ -250,6 +270,8 @@ def load_config(preflight_only: bool) -> tuple[CanaryConfig, list[str], list[str
     privacy_artifact = env("EMSI_DP_CANARY_PRIVACY_ARTIFACT")
     if not privacy_artifact:
         errors.append("EMSI_DP_CANARY_PRIVACY_ARTIFACT is required")
+    elif is_placeholder_ref(privacy_artifact):
+        errors.append("EMSI_DP_CANARY_PRIVACY_ARTIFACT must not be a fixture placeholder")
     if share_analytics is not True:
         errors.append("EMSI_DP_CANARY_SHARE_ANALYTICS must be true")
     if personalization_enabled is not True:
@@ -465,6 +487,8 @@ def validate_safe_ref(key: str, value: str, errors: list[str]) -> None:
         return
     if not SAFE_REF_PATTERN.fullmatch(value):
         errors.append(f"{key} must be a bounded non-PII reference")
+    if is_placeholder_ref(value):
+        errors.append(f"{key} must not be a fixture or placeholder reference")
     lowered = value.lower()
     if "@" in value or "bearer" in lowered or "token" in lowered:
         errors.append(f"{key} must not contain contact or token-shaped data")
@@ -479,8 +503,28 @@ def validate_warehouse_dsn(value: str, errors: list[str]) -> None:
         if marker in lowered:
             errors.append("EMSI_DP_CANARY_WAREHOUSE_DSN must not point at local/dev")
             break
+    parsed = urlparse(value)
+    dsn_parts = (parsed.hostname or "", parsed.username or "", parsed.password or "")
+    if any(is_placeholder_ref(part) for part in dsn_parts):
+        errors.append("EMSI_DP_CANARY_WAREHOUSE_DSN must not use fixture or placeholder host/credentials")
+    if is_template_secret(parsed.password or ""):
+        errors.append("EMSI_DP_CANARY_WAREHOUSE_DSN must not use a template password")
     if not any(sslmode in lowered for sslmode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")):
         errors.append("EMSI_DP_CANARY_WAREHOUSE_DSN must require TLS via sslmode")
+
+
+def is_placeholder_ref(value: str) -> bool:
+    lowered = value.lower()
+    return lowered in PLACEHOLDER_REF_VALUES or any(marker in lowered for marker in PLACEHOLDER_MARKERS)
+
+
+def is_placeholder_hash(value: str) -> bool:
+    normalized = value.removeprefix("sha256:").lower()
+    return len(set(normalized)) <= 2
+
+
+def is_template_secret(value: str) -> bool:
+    return value.lower() in TEMPLATE_SECRET_VALUES
 
 
 def require_check_result(name: str, status: str, artifact: str, errors: list[str]) -> None:
