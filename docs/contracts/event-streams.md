@@ -123,6 +123,15 @@ bounded before landing and must not include raw crash dumps, screenshots,
 request/response bodies, tokens, raw stack payloads with PII, raw content, or
 exact GPS.
 
+Feed ML Phase 4 serving collection fields are server-owned Postgres serving-log
+metadata, not new event-stream payload requirements. The
+`cmd/feed-ml-serving-collection` command joins accepted `feed_item_*` telemetry
+to `app.feed_serving_items` and checks tracking token, request/candidate,
+model/schema/score, fallback, rollback, assignment, holdout, and shadow-mode
+coverage. The current contract is `rules_v1` visible ranking with
+`shadow_mode=disabled`; approved `score_log_only` evidence is required before
+shadow output can appear, and raw model scores remain outside the event stream.
+
 ## Data-Platform Consumer Status
 
 Status: Phase C local-dev ingest worker implemented; runtime smoke passed.

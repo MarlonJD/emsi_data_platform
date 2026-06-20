@@ -128,6 +128,14 @@ Phase 3 app producers send `admin_note_metadata_recorded` only after successful
 iOS/macOS Admin application decisions and only with bounded note metadata
 tokens; note text, applicant-message body, internal-note body, feedback text,
 raw search text, and embeddings are outside the Data Platform contract.
+Phase 4 Feed ML serving collection is report-only from the Data Platform
+perspective: the Go API writes server-owned serving-log buckets in Postgres and
+`cmd/feed-ml-serving-collection` joins those rows to accepted feed telemetry.
+The local ingest contract does not accept raw scores, raw content, opted-out
+training rows, model-ranked traffic, or client-asserted shadow mode. Visible
+ranking remains `rules_v1`, shadow mode remains `disabled` unless a separate
+approved `score_log_only` evidence path exists, and production ML readiness
+remains fail-closed.
 
 ## iOS Limited Production Canary Capture
 
