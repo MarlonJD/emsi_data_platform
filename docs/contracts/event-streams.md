@@ -99,18 +99,25 @@ Admin smoke payloads may contain only bounded surface/module/screen/action
 state fields and optional pseudonymous `target_hash`. Raw user ids, staff ids,
 emails, phones, support/contact reveal payloads, free-form notes, raw policy
 text, screenshots, full URLs, request/response bodies, auth tokens, and secrets
-are outside the contract. Reveal audit mirrors, when approved, may carry only
-field classes, result buckets, actor role/scope buckets, reason length/category,
-confirmation state, authorization outcome, audit action key,
+are outside the contract. The Go API server-side reveal audit mirror may carry
+only field classes, result buckets, actor role/scope buckets, reason
+length/category, confirmation state, authorization outcome, audit action key,
 `sha256:` `audit_receipt_hash`, target type, and optional `sha256:`
-`target_hash`. Note metadata may carry only note surface/type/action, length
-bucket, sensitivity/redaction class, attachment flag, approved language bucket,
+`target_hash`, and only after `app.staff_ops_audit` has a successful receipt.
+Denied, invalid, and audit-failed reveal paths do not land a success mirror.
+Note metadata may carry only note surface/type/action, length bucket,
+sensitivity/redaction class, attachment flag, approved language bucket,
 lifecycle buckets, target type, and optional `sha256:` `target_hash`.
 Required staff security/audit telemetry remains separate from optional product
 analytics; `app.staff_ops_audit` is the canonical contact/support reveal audit
 source. Expansion metadata string values must be bounded tokens, and hash fields
 must be `sha256:` values; raw prose, contact-shaped values, URLs, tokens, and
 phone-shaped values are rejected before landing.
+Sentry, Crashlytics, MetricKit, OTEL, and similar diagnostics envelopes are not
+part of this event-stream smoke contract. Future diagnostics events must be
+bounded before landing and must not include raw crash dumps, screenshots,
+request/response bodies, tokens, raw stack payloads with PII, raw content, or
+exact GPS.
 
 ## Data-Platform Consumer Status
 

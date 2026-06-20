@@ -181,6 +181,13 @@ screenshots, tokens, or exact GPS/location fields. Required contact/support
 reveal audit truth remains `app.staff_ops_audit`, not the optional analytics
 stream.
 
+Crash/error/performance diagnostics such as Sentry, Crashlytics, MetricKit,
+OTEL, `crash_reported`, or `api_request_failed` are not part of this local event
+intake smoke. Treat them as a separate diagnostics lane that must be mapped to
+bounded metadata before landing; do not ingest raw crash dumps, screenshots,
+request/response bodies, tokens, raw stack payloads with PII, raw content, or
+exact GPS into the analytics or Feed ML data path.
+
 ## Optional Profiles
 
 ```sh
