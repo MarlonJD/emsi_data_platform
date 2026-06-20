@@ -21,5 +21,6 @@ dbt/target/
 .env
 .env.*
 !.env.example
+!.env.canary.example
 .venv/
 venv/

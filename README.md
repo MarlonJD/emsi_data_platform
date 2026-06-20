@@ -130,6 +130,9 @@ after the real iOS run.
 Preflight before starting the canary:
 
 ```sh
+cp .env.canary.example .env.canary
+# Fill `.env.canary` with the approved target, seeded user, privacy artifact,
+# warehouse DSN, and 60-120 second source window.
 ./scripts/run_ios_limited_canary_capture.sh \
   --preflight-only \
   --evidence-json /private/tmp/emsi-ios-canary-preflight.json
@@ -142,6 +145,13 @@ EMSI_DP_CANARY_ALLOW_PRODUCTION_CAPTURE=true \
 ./scripts/run_ios_limited_canary_capture.sh \
   --evidence-json /private/tmp/emsi-ios-canary-evidence.json
 ```
+
+The wrapper loads `.env.canary` automatically when present, or another
+approved bundle passed with `--env-file <path>` / `EMSI_DP_CANARY_ENV_FILE`.
+Only use this for the production or staging-production-equivalent canary access
+bundle. The normal local `.env` is intentionally not loaded as canary evidence.
+The loader accepts only plain `EMSI_DP_CANARY_*=value` assignments and does not
+execute shell code from the env file.
 
 Required preflight inputs:
 
