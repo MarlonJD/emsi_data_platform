@@ -180,6 +180,10 @@ raw reasons, note bodies, messages, raw content, request/response bodies,
 screenshots, tokens, or exact GPS/location fields. Required contact/support
 reveal audit truth remains `app.staff_ops_audit`, not the optional analytics
 stream.
+Phase 3 app note metadata smoke should exercise successful iOS/macOS Admin
+application decisions and then verify only bounded `admin_note_metadata_recorded`
+fields land; raw note/reason/applicant-message values must remain absent from
+landing and DLQ payloads.
 
 Crash/error/performance diagnostics such as Sentry, Crashlytics, MetricKit,
 OTEL, `crash_reported`, or `api_request_failed` are not part of this local event

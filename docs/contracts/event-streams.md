@@ -108,6 +108,10 @@ Denied, invalid, and audit-failed reveal paths do not land a success mirror.
 Note metadata may carry only note surface/type/action, length bucket,
 sensitivity/redaction class, attachment flag, approved language bucket,
 lifecycle buckets, target type, and optional `sha256:` `target_hash`.
+Current iOS/macOS Phase 3 producers use the existing app analytics path after
+successful Admin application decisions and send only those metadata tokens; raw
+reason, internal-note, or applicant-message strings must not appear in the
+event envelope.
 Required staff security/audit telemetry remains separate from optional product
 analytics; `app.staff_ops_audit` is the canonical contact/support reveal audit
 source. Expansion metadata string values must be bounded tokens, and hash fields

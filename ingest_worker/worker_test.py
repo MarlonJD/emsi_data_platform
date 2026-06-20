@@ -54,6 +54,30 @@ class WorkerValidationTest(unittest.TestCase):
 
         self.assertEqual(validated.event_name, "admin_reveal_audit_recorded")
 
+    def test_note_metadata_payload_is_accepted(self) -> None:
+        event = valid_event(
+            "admin_note_metadata_recorded",
+            {
+                "admin_surface": "admin_console",
+                "module_key": "applications",
+                "screen_key": "admin.applications",
+                "note_surface": "application_review",
+                "note_type": "staff_decision_reason",
+                "note_action": "created",
+                "note_length_bucket": "21_100",
+                "sensitivity_class": "p2",
+                "redaction_class": "metadata_only",
+                "has_attachment": False,
+                "lifecycle_state": "active",
+                "lifecycle_bucket": "same_day",
+                "target_type": "application",
+            },
+        )
+
+        validated = worker.validate_event(json.dumps(event).encode("utf-8"))
+
+        self.assertEqual(validated.event_name, "admin_note_metadata_recorded")
+
     def test_expansion_metadata_payload_rejects_raw_value_in_allowed_field(self) -> None:
         event = valid_event(
             "admin_reveal_audit_recorded",

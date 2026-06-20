@@ -124,6 +124,10 @@ The 2026-06-20 required expansion contract adds metadata-only
 approved local/dev mirrors. Required contact/support reveal audit evidence still
 belongs to `app.staff_ops_audit`, and ClickHouse remains non-canonical until a
 separate production hot-analytics promotion gate passes.
+Phase 3 app producers send `admin_note_metadata_recorded` only after successful
+iOS/macOS Admin application decisions and only with bounded note metadata
+tokens; note text, applicant-message body, internal-note body, feedback text,
+raw search text, and embeddings are outside the Data Platform contract.
 
 ## iOS Limited Production Canary Capture
 
