@@ -118,6 +118,63 @@ aggregate, and compares the same bounded hourly aggregate against PostgreSQL.
 The printed timing is a local candidate benchmark only; it does not justify
 default startup or production use.
 
+## iOS Limited Production Canary Capture
+
+Use this helper only for the accepted-risk iOS limited canary approved by
+`EMSI-DP-P1A-IOS-CANARY-20260620-AR01`. It does not emit app events and must
+not be used to replace the real seeded-user iOS canary run. Its job is to fail
+closed when the approved target, seeded user, privacy evidence, or
+warehouse/check access is missing, then capture the bounded warehouse evidence
+after the real iOS run.
+
+Preflight before starting the canary:
+
+```sh
+./scripts/run_ios_limited_canary_capture.sh \
+  --preflight-only \
+  --evidence-json /private/tmp/emsi-ios-canary-preflight.json
+```
+
+Capture after the 1-2 minute iOS run and downstream checks:
+
+```sh
+EMSI_DP_CANARY_ALLOW_PRODUCTION_CAPTURE=true \
+./scripts/run_ios_limited_canary_capture.sh \
+  --evidence-json /private/tmp/emsi-ios-canary-evidence.json
+```
+
+Required preflight inputs:
+
+| Environment variable | Purpose |
+| --- | --- |
+| `EMSI_DP_CANARY_APPROVAL_ID` | Must equal `EMSI-DP-P1A-IOS-CANARY-20260620-AR01`. |
+| `EMSI_DP_CANARY_TARGET_NAME` | Non-PII approved target name; local/dev/test names are rejected. |
+| `EMSI_DP_CANARY_TARGET_CLASS` | `production` or `staging-production-equivalent`. |
+| `EMSI_DP_CANARY_SEEDED_USER_REF` | Non-PII seeded iOS canary user reference. |
+| `EMSI_DP_CANARY_SUBJECT_USER_HASH` | Pseudonymous 64-hex subject hash used for warehouse filtering. |
+| `EMSI_DP_CANARY_EVENT_ID_PREFIX` | Per-run event id prefix emitted by the real iOS canary path. |
+| `EMSI_DP_CANARY_WINDOW_START` | ISO-8601 canary window start with timezone. |
+| `EMSI_DP_CANARY_WINDOW_END` | ISO-8601 canary window end with timezone; duration must be 60-120 seconds. |
+| `EMSI_DP_CANARY_WAREHOUSE_DSN` | Read-only production warehouse DSN; local/dev markers and `sslmode=disable` are rejected. |
+| `EMSI_DP_CANARY_SHARE_ANALYTICS` | Must be `true` for the seeded user. |
+| `EMSI_DP_CANARY_PERSONALIZATION_ENABLED` | Must be `true` for the seeded user. |
+| `EMSI_DP_CANARY_PRIVACY_ARTIFACT` | Durable privacy preference evidence id or path. |
+
+Required capture inputs after downstream checks:
+
+| Environment variable | Purpose |
+| --- | --- |
+| `EMSI_DP_CANARY_DBT_STATUS` and `EMSI_DP_CANARY_DBT_ARTIFACT` | dbt must be `passed` with an artifact id or path. |
+| `EMSI_DP_CANARY_SODA_STATUS` and `EMSI_DP_CANARY_SODA_ARTIFACT` | Soda must be `passed` with an artifact id or path. |
+| `EMSI_DP_CANARY_DAGSTER_STATUS` and `EMSI_DP_CANARY_DAGSTER_ARTIFACT` | Dagster must be `passed` with an artifact id or run id. |
+| `EMSI_DP_CANARY_STOP_ROLLBACK_OUTCOME` | Stop or rollback outcome for the production canary window. |
+
+The evidence JSON intentionally redacts the warehouse DSN and subject hash. It
+contains the target class, seeded user reference, canary window, privacy flags,
+landing count, DLQ count, accepted event-name counts, forbidden-field result,
+downstream check artifacts, success criteria, and stop/rollback outcome.
+Local/dev evidence remains disallowed as production canary evidence.
+
 Superset metadata backup/restore local smoke:
 
 ```sh
