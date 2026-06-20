@@ -99,15 +99,31 @@ published on a host port by default; the smoke reaches it on the Compose
 network. The runner creates the candidate schema idempotently, exports bounded
 columns from `analytics.raw_event_landing`, loads the local ClickHouse
 `MergeTree` event table, refreshes the hourly `SummingMergeTree` aggregate, and
-compares the aggregate result with the same PostgreSQL query.
+compares the aggregate result with the same PostgreSQL query. It also writes a
+promotion-gate report under
+`artifacts/clickhouse-promotion-gate/report.json` and `report.md`.
+
+The default run has no production approval manifest, so the report is expected
+to keep `productionPromotionStatus=blocked` while still recording local
+candidate parity and rebuild-from-PostgreSQL evidence. To test a complete
+manifest, place it under `artifacts/` and set
+`CLICKHOUSE_PROMOTION_MANIFEST=/workspace/artifacts/<manifest>.json` so the
+container can read it. Manifest evidence and owner-approval values must be
+bounded evidence ids, not raw approval text, names, emails, tokens, or support
+details; unsafe values keep the gate blocked and are redacted in the report.
 
 This is candidate evidence only:
 
 - PostgreSQL remains canonical for landing, dbt, Data Vault, Soda, and Dagster.
 - ClickHouse stores hashes and bounded event metadata, not raw `subject` or
-  `payload` JSON.
+  `payload` JSON, reveal payload values, raw note text, raw content, tokens,
+  screenshots, request bodies, or exact GPS.
 - The benchmark output is local and bounded; it does not prove production need,
   retention readiness, backup/restore safety, or source-bound quality.
+- The promotion-gate report cannot make ClickHouse canonical or enable
+  production; owner-approved measured need, retention, backup/restore,
+  monitoring, vulnerability/provenance, and approval evidence must be supplied
+  separately.
 - Roll back by stopping the `hot-analytics` profile or leaving
   `./scripts/run_clickhouse_candidate_smoke.sh` unrun; canonical analytics
   PostgreSQL remains unaffected.

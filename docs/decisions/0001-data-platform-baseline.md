@@ -123,12 +123,16 @@ Status: local-dev candidate
   and does not expose host ports by default.
 - The Phase E local smoke feeds ClickHouse from
   `analytics.raw_event_landing`, copying only bounded event metadata and hashes,
-  then compares hourly aggregates with PostgreSQL for the same bounded rows.
+  then compares hourly aggregates with PostgreSQL for the same bounded rows and
+  writes a fail-closed promotion-gate report under
+  `artifacts/clickhouse-promotion-gate/`.
 
 Production gap: ClickHouse is not a baseline warehouse and not a production
 sink. Production acceptance would require measured need, topology/security
 review, data retention policy, replay or restore evidence, scan/provenance
-approval, monitoring, and owner acceptance.
+approval, monitoring, and owner acceptance. The gate cannot mark ClickHouse
+canonical or production-enabled; that remains a separate owner-approved
+infrastructure change after the evidence is reviewed.
 
 ### Soda
 

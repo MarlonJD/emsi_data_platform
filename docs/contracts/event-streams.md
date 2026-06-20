@@ -184,8 +184,11 @@ Status: Phase E local-dev candidate smoke implemented.
   metadata, and landing timestamp.
 - Raw `subject` and `payload` JSON are not copied into ClickHouse.
 - The local smoke compares the same hourly aggregate in PostgreSQL and
-  ClickHouse and prints local timing for the bounded workload. That timing is
-  not production adoption evidence.
+  ClickHouse, prints local timing for the bounded workload, and writes the
+  fail-closed promotion-gate report documented in
+  [`clickhouse-hot-analytics-promotion-gate.md`](clickhouse-hot-analytics-promotion-gate.md).
+  That timing and report are not production adoption evidence unless the
+  separate manifest evidence and owner approvals are present.
 - Disable the candidate by leaving the `hot-analytics` profile stopped; the
   canonical PostgreSQL/dbt/Soda/Dagster path continues to work.
 

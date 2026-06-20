@@ -11,6 +11,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Iterable
 
 import psycopg2
@@ -21,6 +22,52 @@ from ingest_worker.common import int_env, postgres_config
 EVENT_TABLE = "analytics_events_local_candidate"
 AGGREGATE_TABLE = "analytics_event_hourly_counts_local_candidate"
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+EVIDENCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
+PROMOTION_GATE_SCHEMA_VERSION = "emsi-clickhouse-hot-analytics-promotion-v1"
+CANONICAL_WAREHOUSE = "postgresql"
+CLICKHOUSE_MODE = "local_candidate_noncanonical"
+REQUIRED_PROMOTION_EVIDENCE = (
+    ("measuredNeedEvidenceId", "measured need"),
+    ("parityEvidenceId", "bounded Postgres/ClickHouse parity"),
+    ("rebuildFromCanonicalEvidenceId", "rebuild from canonical PostgreSQL"),
+    ("retentionPolicyEvidenceId", "retention policy"),
+    ("backupRestoreEvidenceId", "backup/restore or replay proof"),
+    ("monitoringEvidenceId", "monitoring and alerting"),
+    ("vulnerabilityScanEvidenceId", "vulnerability scan"),
+    ("provenanceEvidenceId", "image provenance and license"),
+)
+REQUIRED_OWNER_APPROVALS = ("analytics", "sre", "privacySecurity")
+CLICKHOUSE_CANDIDATE_COLUMNS = (
+    "event_id",
+    "event_name",
+    "event_version",
+    "occurred_at",
+    "received_at",
+    "producer",
+    "privacy_class",
+    "subject_user_hash",
+    "payload_sha256",
+    "raw_record_sha256",
+    "raw_record_bytes",
+    "source_topic",
+    "source_partition",
+    "source_offset",
+    "landed_at",
+)
+FORBIDDEN_CLICKHOUSE_COLUMNS = (
+    "subject",
+    "payload",
+    "email",
+    "phone",
+    "token",
+    "request_body",
+    "response_body",
+    "screenshot",
+    "exact_gps",
+    "raw_content",
+    "note_body",
+    "reveal_payload",
+)
 
 
 @dataclass(frozen=True)
@@ -80,11 +127,26 @@ def main() -> int:
         return 1
 
     event_count = sum(row[3] for row in clickhouse_aggregate)
+    try:
+        report = build_promotion_gate_report(
+            database=clickhouse.database,
+            row_count=len(rows),
+            aggregate_event_count=event_count,
+            postgres_aggregate_ms=postgres_ms,
+            clickhouse_aggregate_ms=clickhouse_ms,
+            parity_matched=True,
+            promotion_manifest=load_promotion_manifest_from_env(),
+        )
+        write_promotion_gate_reports(report)
+    except RuntimeError as exc:
+        print(f"clickhouse candidate smoke failed: {exc}", file=sys.stderr)
+        return 1
+
     print(
         "clickhouse candidate smoke passed: "
         f"rows={len(rows)} aggregate_events={event_count} "
         f"postgres_aggregate_ms={postgres_ms:.2f} clickhouse_aggregate_ms={clickhouse_ms:.2f} "
-        "benchmark_scope=local_candidate_bounded"
+        f"benchmark_scope=local_candidate_bounded promotion_status={report['productionPromotionStatus']}"
     )
     return 0
 
@@ -254,6 +316,235 @@ def clickhouse_event_row(row: dict[str, object]) -> dict[str, object]:
         "source_offset": row["source_offset"],
         "landed_at": clickhouse_datetime(row["landed_at"]),
     }
+
+
+def load_promotion_manifest_from_env() -> dict[str, object]:
+    manifest_path = os.getenv("CLICKHOUSE_PROMOTION_MANIFEST")
+    if not manifest_path:
+        return {}
+
+    try:
+        with open(manifest_path, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+    except OSError as exc:
+        raise RuntimeError(f"unable to read CLICKHOUSE_PROMOTION_MANIFEST: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"invalid CLICKHOUSE_PROMOTION_MANIFEST JSON: {exc}") from exc
+
+    if not isinstance(manifest, dict):
+        raise RuntimeError("CLICKHOUSE_PROMOTION_MANIFEST must contain a JSON object")
+    return manifest
+
+
+def build_promotion_gate_report(
+    *,
+    database: str,
+    row_count: int,
+    aggregate_event_count: int,
+    postgres_aggregate_ms: float,
+    clickhouse_aggregate_ms: float,
+    parity_matched: bool,
+    promotion_manifest: dict[str, object] | None = None,
+) -> dict[str, object]:
+    manifest = promotion_manifest or {}
+    bounded_columns_only = clickhouse_candidate_columns_are_bounded()
+    manifest_declares_noncanonical = manifest.get("clickhouseCanonical") is False
+    manifest_declares_production_disabled = manifest.get("clickhouseProductionEnabled") is False
+    production_enabled = manifest.get("clickhouseProductionEnabled") is True
+    manifest_has_promotion_claim = bool(manifest)
+
+    missing_evidence = [
+        {"key": key, "label": label}
+        for key, label in REQUIRED_PROMOTION_EVIDENCE
+        if not safe_evidence_id(manifest.get(key))
+    ]
+    owner_approvals = manifest.get("ownerApprovals", {})
+    if not isinstance(owner_approvals, dict):
+        owner_approvals = {}
+    missing_owner_approvals = [
+        key
+        for key in REQUIRED_OWNER_APPROVALS
+        if not safe_evidence_id(owner_approvals.get(key))
+    ]
+
+    guardrail_failures: list[str] = []
+    if not parity_matched:
+        guardrail_failures.append("aggregate_parity_mismatch")
+    if not bounded_columns_only:
+        guardrail_failures.append("clickhouse_candidate_columns_not_bounded")
+    if manifest_has_promotion_claim and "clickhouseCanonical" not in manifest:
+        guardrail_failures.append("manifest_missing_clickhouse_noncanonical")
+    if manifest_has_promotion_claim and "clickhouseProductionEnabled" not in manifest:
+        guardrail_failures.append("manifest_missing_clickhouse_production_disabled")
+    if "clickhouseCanonical" in manifest and not manifest_declares_noncanonical:
+        guardrail_failures.append("manifest_attempts_clickhouse_canonical")
+    if production_enabled:
+        guardrail_failures.append("manifest_attempts_enable_production")
+    for key, _label in REQUIRED_PROMOTION_EVIDENCE:
+        if non_empty_string(manifest.get(key)) and not safe_evidence_id(manifest.get(key)):
+            guardrail_failures.append(f"unsafe_manifest_evidence_id:{key}")
+    for key in REQUIRED_OWNER_APPROVALS:
+        if non_empty_string(owner_approvals.get(key)) and not safe_evidence_id(owner_approvals.get(key)):
+            guardrail_failures.append(f"unsafe_manifest_owner_approval:{key}")
+
+    production_promotion_ready = (
+        manifest_declares_noncanonical
+        and manifest_declares_production_disabled
+        and not guardrail_failures
+        and not missing_evidence
+        and not missing_owner_approvals
+    )
+    production_status = "ready-for-owner-approved-hot-analytics" if production_promotion_ready else "blocked"
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    report: dict[str, object] = {
+        "schemaVersion": PROMOTION_GATE_SCHEMA_VERSION,
+        "generatedAt": generated_at,
+        "status": production_status,
+        "productionPromotionReady": production_promotion_ready,
+        "productionPromotionStatus": production_status,
+        "canonicalWarehouse": CANONICAL_WAREHOUSE,
+        "clickhouseMode": CLICKHOUSE_MODE,
+        "clickhouseProductionEnabled": False,
+        "clickhouseCanonical": False,
+        "candidateDatabase": database,
+        "candidateTables": {
+            "events": EVENT_TABLE,
+            "hourlyAggregate": AGGREGATE_TABLE,
+        },
+        "sourceOfTruth": "analytics.raw_event_landing",
+        "copyBoundary": "truncate-and-reload bounded/hash columns from PostgreSQL",
+        "localCandidateEvidence": {
+            "parityMatched": parity_matched,
+            "rowCount": row_count,
+            "aggregateEventCount": aggregate_event_count,
+            "postgresAggregateMs": round(postgres_aggregate_ms, 2),
+            "clickhouseAggregateMs": round(clickhouse_aggregate_ms, 2),
+            "benchmarkScope": "local_candidate_bounded",
+            "rebuildFromCanonical": True,
+        },
+        "privacyGuardrails": {
+            "boundedColumnsOnly": bounded_columns_only,
+            "rawSubjectCopied": False,
+            "rawPayloadCopied": False,
+            "rawPiiCopied": False,
+            "rawNoteTextCopied": False,
+            "revealPayloadValueCopied": False,
+            "tokensCopied": False,
+            "screenshotsCopied": False,
+            "requestBodiesCopied": False,
+            "exactGpsCopied": False,
+            "candidateColumns": list(CLICKHOUSE_CANDIDATE_COLUMNS),
+            "forbiddenColumns": list(FORBIDDEN_CLICKHOUSE_COLUMNS),
+        },
+        "missingEvidence": missing_evidence,
+        "missingOwnerApprovals": missing_owner_approvals,
+        "guardrailFailures": guardrail_failures,
+        "manifestEvidence": {
+            "path": os.getenv("CLICKHOUSE_PROMOTION_MANIFEST", ""),
+            "schemaVersion": manifest.get("schemaVersion", ""),
+            "evidenceIds": {
+                key: sanitized_evidence_id(manifest.get(key))
+                for key, _label in REQUIRED_PROMOTION_EVIDENCE
+            },
+            "ownerApprovals": {
+                key: sanitized_evidence_id(value)
+                for key, value in owner_approvals.items()
+            },
+        },
+    }
+    return report
+
+
+def clickhouse_candidate_columns_are_bounded() -> bool:
+    return not any(column in CLICKHOUSE_CANDIDATE_COLUMNS for column in FORBIDDEN_CLICKHOUSE_COLUMNS)
+
+
+def non_empty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def safe_evidence_id(value: object) -> bool:
+    return isinstance(value, str) and bool(EVIDENCE_ID_RE.match(value.strip()))
+
+
+def sanitized_evidence_id(value: object) -> str:
+    if not non_empty_string(value):
+        return ""
+    text = value.strip()
+    return text if safe_evidence_id(text) else "[unsafe-redacted]"
+
+
+def write_promotion_gate_reports(report: dict[str, object]) -> None:
+    json_path = os.getenv("CLICKHOUSE_PROMOTION_REPORT_JSON")
+    markdown_path = os.getenv("CLICKHOUSE_PROMOTION_REPORT_MD")
+    if json_path:
+        write_text_file(json_path, json.dumps(report, indent=2, sort_keys=True) + "\n")
+    if markdown_path:
+        write_text_file(markdown_path, render_promotion_gate_markdown(report))
+
+
+def write_text_file(path: str, body: str) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(body, encoding="utf-8")
+
+
+def render_promotion_gate_markdown(report: dict[str, object]) -> str:
+    local_evidence = report["localCandidateEvidence"]
+    guardrails = report["privacyGuardrails"]
+    missing_evidence = report["missingEvidence"]
+    missing_approvals = report["missingOwnerApprovals"]
+    failures = report["guardrailFailures"]
+
+    lines = [
+        "# ClickHouse Hot Analytics Promotion Gate",
+        "",
+        f"Generated: {report['generatedAt']}",
+        f"Status: {report['productionPromotionStatus']}",
+        f"Canonical warehouse: {report['canonicalWarehouse']}",
+        f"ClickHouse mode: {report['clickhouseMode']}",
+        f"ClickHouse production enabled: {str(report['clickhouseProductionEnabled']).lower()}",
+        f"ClickHouse canonical: {str(report['clickhouseCanonical']).lower()}",
+        "",
+        "## Local Candidate Evidence",
+        "",
+        f"- Parity matched: {str(local_evidence['parityMatched']).lower()}",
+        f"- Rows copied: {local_evidence['rowCount']}",
+        f"- Aggregate events: {local_evidence['aggregateEventCount']}",
+        f"- PostgreSQL aggregate ms: {local_evidence['postgresAggregateMs']}",
+        f"- ClickHouse aggregate ms: {local_evidence['clickhouseAggregateMs']}",
+        f"- Rebuild from canonical PostgreSQL: {str(local_evidence['rebuildFromCanonical']).lower()}",
+        "",
+        "## Privacy Guardrails",
+        "",
+        f"- Bounded columns only: {str(guardrails['boundedColumnsOnly']).lower()}",
+        f"- Raw subject copied: {str(guardrails['rawSubjectCopied']).lower()}",
+        f"- Raw payload copied: {str(guardrails['rawPayloadCopied']).lower()}",
+        f"- Raw PII copied: {str(guardrails['rawPiiCopied']).lower()}",
+        "",
+        "## Missing Production Evidence",
+        "",
+    ]
+    if missing_evidence:
+        lines.extend(f"- {item['label']} ({item['key']})" for item in missing_evidence)
+    else:
+        lines.append("- none")
+
+    lines.extend(["", "## Missing Owner Approvals", ""])
+    if missing_approvals:
+        lines.extend(f"- {approval}" for approval in missing_approvals)
+    else:
+        lines.append("- none")
+
+    lines.extend(["", "## Guardrail Failures", ""])
+    if failures:
+        lines.extend(f"- {failure}" for failure in failures)
+    else:
+        lines.append("- none")
+
+    lines.append("")
+    return "\n".join(lines)
 
 
 def read_clickhouse_hourly_aggregate(

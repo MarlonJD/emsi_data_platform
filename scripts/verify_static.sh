@@ -20,13 +20,26 @@ grep -q "CLICKHOUSE_IMAGE_STATUS=candidate-local-smoke" versions.env
 grep -q "CLICKHOUSE_SECURITY_SCAN_STATUS=pending-local-vulnerability-scan" versions.env
 grep -q "CLICKHOUSE_PRODUCTION_STATUS=blocked-pending-topology-security-governance-restore-owner-approval" versions.env
 test -f sql/clickhouse-init/010_hot_analytics.sql
+test -f docs/contracts/clickhouse-hot-analytics-promotion-gate.md
 grep -q "ENGINE = MergeTree" sql/clickhouse-init/010_hot_analytics.sql
 grep -q "ENGINE = SummingMergeTree" sql/clickhouse-init/010_hot_analytics.sql
 grep -q "profiles: \\[\"hot-analytics\"\\]" docker-compose.yml
 test -x scripts/run_clickhouse_candidate_smoke.sh
 test -f ingest_worker/clickhouse_candidate_smoke.py
+test -f ingest_worker/clickhouse_candidate_smoke_test.py
 grep -q "clickhouse-candidate-smoke" docker-compose.yml
 grep -q "ingest_worker.clickhouse_candidate_smoke" docker-compose.yml
+grep -q "CLICKHOUSE_PROMOTION_REPORT_JSON" docker-compose.yml
+grep -q "CLICKHOUSE_PROMOTION_REPORT_MD" docker-compose.yml
+grep -q "./artifacts:/workspace/artifacts" docker-compose.yml
+grep -q "clickhouse-promotion-gate" scripts/run_clickhouse_candidate_smoke.sh
+grep -q "report.json" scripts/run_clickhouse_candidate_smoke.sh
+grep -q "report.md" scripts/run_clickhouse_candidate_smoke.sh
+grep -q -- "--force-recreate" scripts/run_clickhouse_candidate_smoke.sh
+grep -q "clickhouseCanonical=false" docs/contracts/clickhouse-hot-analytics-promotion-gate.md
+grep -q "clickhouseProductionEnabled=false" docs/contracts/clickhouse-hot-analytics-promotion-gate.md
+grep -q "EVIDENCE_ID_RE" ingest_worker/clickhouse_candidate_smoke.py
+grep -q "unsafe-redacted" ingest_worker/clickhouse_candidate_smoke.py
 grep -q "KAFKA_PYTHON_VERSION=3.0.2" versions.env
 grep -q "INGEST_POSTGRES_DRIVER=psycopg2-binary==2.9.12" versions.env
 grep -q "kafka-python==3.0.2" pyproject.toml

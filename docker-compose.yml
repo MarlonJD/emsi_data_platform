@@ -349,6 +349,11 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-emsi_hot_analytics}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse_local_password}
       CLICKHOUSE_EXPORT_LIMIT: ${CLICKHOUSE_EXPORT_LIMIT:-500}
+      CLICKHOUSE_PROMOTION_MANIFEST: ${CLICKHOUSE_PROMOTION_MANIFEST:-}
+      CLICKHOUSE_PROMOTION_REPORT_JSON: ${CLICKHOUSE_PROMOTION_REPORT_JSON:-/workspace/artifacts/clickhouse-promotion-gate/report.json}
+      CLICKHOUSE_PROMOTION_REPORT_MD: ${CLICKHOUSE_PROMOTION_REPORT_MD:-/workspace/artifacts/clickhouse-promotion-gate/report.md}
+    volumes:
+      - ./artifacts:/workspace/artifacts
     command: ["python", "-m", "ingest_worker.clickhouse_candidate_smoke"]
 
   grafana:
