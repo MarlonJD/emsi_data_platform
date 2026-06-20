@@ -15,12 +15,12 @@ checks:
         OR occurred_at < timestamp with time zone '2020-01-01T00:00:00Z'
         OR received_at > now() + interval '5 minutes'
   - failed_rows:
-      name: Disallowed raw personal identifiers are absent
+      name: Disallowed raw analytics fields are absent
       qualifier: no_raw_identifiers
       expression: |
         subject_user_hash LIKE '%@%'
-        OR subject::text ~* '("email"|"phone"|"authorization"|"token"|"user_id"|"userId"|"raw_user_id"|"actor_user_id"|"actorUserId")'
-        OR payload::text ~* '("email"|"phone"|"authorization"|"token"|"user_id"|"userId"|"raw_user_id"|"actor_user_id"|"actorUserId")'
+        OR subject::text ~* '("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|"auth_token"|"access_token"|"refresh_token"|"session_token"|"api_key"|"cookie"|"signed_url"|"full_url"|"user_id"|"userId"|"raw_user_id"|"actor_user_id"|"actorUserId"|"staff_id"|"target_user_id"|"body"|"message"|"note"|"note_body"|"raw_note"|"raw_note_text"|"internal_note"|"private_note"|"applicant_message"|"feedback_message"|"search_text"|"raw_search_text"|"raw_text"|"raw_content"|"post_body"|"comment_body"|"reply_body"|"dm_content"|"raw_policy_text"|"request_body"|"response_body"|"transcript"|"screenshot"|"view_hierarchy"|"support_payload"|"support_contact"|"contact_payload"|"reveal_payload"|"reveal_value"|"contact_value"|"payload_value"|"exact_gps"|"gps"|"latitude"|"longitude"|"lat"|"lon")'
+        OR payload::text ~* '("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|"auth_token"|"access_token"|"refresh_token"|"session_token"|"api_key"|"cookie"|"signed_url"|"full_url"|"user_id"|"userId"|"raw_user_id"|"actor_user_id"|"actorUserId"|"staff_id"|"target_user_id"|"body"|"message"|"note"|"note_body"|"raw_note"|"raw_note_text"|"internal_note"|"private_note"|"applicant_message"|"feedback_message"|"search_text"|"raw_search_text"|"raw_text"|"raw_content"|"post_body"|"comment_body"|"reply_body"|"dm_content"|"raw_policy_text"|"request_body"|"response_body"|"transcript"|"screenshot"|"view_hierarchy"|"support_payload"|"support_contact"|"contact_payload"|"reveal_payload"|"reveal_value"|"contact_value"|"payload_value"|"exact_gps"|"gps"|"latitude"|"longitude"|"lat"|"lon")'
 
 columns:
   - name: event_id

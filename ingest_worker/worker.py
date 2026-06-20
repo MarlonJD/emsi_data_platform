@@ -25,13 +25,99 @@ from ingest_worker.common import (
 
 
 BLOCKED_IDENTIFIER_KEYS = {
-    "userid",
-    "rawuserid",
+    "accesstoken",
     "actoruserid",
-    "email",
-    "phone",
+    "apikey",
+    "applicantmessage",
+    "authtoken",
     "authorization",
+    "body",
+    "commentbody",
+    "contactpayload",
+    "contactvalue",
+    "cookie",
+    "dmcontent",
+    "email",
+    "emailaddress",
+    "exactgps",
+    "feedbackmessage",
+    "freeform",
+    "fullurl",
+    "gps",
+    "internalnote",
+    "lat",
+    "latitude",
+    "lon",
+    "longitude",
+    "message",
+    "note",
+    "notebody",
+    "password",
+    "payloadvalue",
+    "phone",
+    "phonenumber",
+    "postbody",
+    "privatenote",
+    "rawcontent",
+    "rawnote",
+    "rawnotetext",
+    "rawpolicytext",
+    "rawsearchtext",
+    "rawtext",
+    "rawuserid",
+    "refreshtoken",
+    "replybody",
+    "requestbody",
+    "responsebody",
+    "revealpayload",
+    "revealvalue",
+    "screenshot",
+    "searchtext",
+    "sessiontoken",
+    "signedurl",
+    "staffid",
+    "supportcontact",
+    "supportpayload",
+    "targetuserid",
     "token",
+    "transcript",
+    "userid",
+    "viewhierarchy",
+}
+
+ADMIN_REVEAL_AUDIT_PAYLOAD_KEYS = {
+    "admin_surface",
+    "module_key",
+    "screen_key",
+    "reveal_field_class",
+    "reveal_result",
+    "actor_role_scope_key",
+    "reason_length_bucket",
+    "reason_category",
+    "confirmation_state",
+    "authorization_outcome",
+    "audit_action_key",
+    "audit_receipt_hash",
+    "target_type",
+    "target_hash",
+}
+
+ADMIN_NOTE_METADATA_PAYLOAD_KEYS = {
+    "admin_surface",
+    "module_key",
+    "screen_key",
+    "note_surface",
+    "note_type",
+    "note_action",
+    "note_length_bucket",
+    "sensitivity_class",
+    "redaction_class",
+    "has_attachment",
+    "language_bucket",
+    "lifecycle_state",
+    "lifecycle_bucket",
+    "target_type",
+    "target_hash",
 }
 
 
@@ -264,11 +350,14 @@ def validate_event(raw_value: bytes) -> ValidatedEvent:
     session_id = subject.get("session_id")
     if session_id is not None and not isinstance(session_id, str):
         raise ValidationError("invalid_session_id", "subject.session_id must be a string")
+    if contains_blocked_identifier_key(subject):
+        raise ValidationError("blocked_subject_identifier", "subject contains a blocked raw identifier key")
     payload = decoded.get("payload")
     if not isinstance(payload, dict):
         raise ValidationError("invalid_payload", "payload must be a JSON object")
     if contains_blocked_identifier_key(payload):
         raise ValidationError("blocked_payload_identifier", "payload contains a blocked raw identifier key")
+    validate_expansion_metadata_payload(event_name, payload)
 
     return ValidatedEvent(
         event_id=event_id,
@@ -509,6 +598,79 @@ def contains_blocked_identifier_key(value: Any) -> bool:
     elif isinstance(value, list):
         return any(contains_blocked_identifier_key(item) for item in value)
     return False
+
+
+def validate_expansion_metadata_payload(event_name: str, payload: dict[str, Any]) -> None:
+    allowed_keys = expansion_metadata_payload_keys(event_name)
+    if allowed_keys is None:
+        return
+    for key in payload:
+        if key.strip() not in allowed_keys:
+            raise ValidationError(
+                "unsupported_expansion_metadata_field",
+                f"payload contains unsupported expansion metadata field {key}",
+            )
+    for key, value in payload.items():
+        validate_expansion_metadata_value(key.strip(), value)
+
+
+def expansion_metadata_payload_keys(event_name: str) -> set[str] | None:
+    if event_name == "admin_reveal_audit_recorded":
+        return ADMIN_REVEAL_AUDIT_PAYLOAD_KEYS
+    if event_name == "admin_note_metadata_recorded":
+        return ADMIN_NOTE_METADATA_PAYLOAD_KEYS
+    return None
+
+
+def validate_expansion_metadata_value(key: str, value: Any) -> None:
+    if value is None:
+        return
+    if isinstance(value, str):
+        trimmed = value.strip()
+        if len(trimmed) > 256:
+            raise ValidationError("invalid_expansion_metadata_value", f"payload.{key} is too long")
+        lower = trimmed.lower()
+        if "@" in trimmed or "://" in trimmed:
+            raise ValidationError(
+                "raw_expansion_metadata_value",
+                f"payload.{key} contains raw contact or URL-shaped data",
+            )
+        if "bearer " in lower or "token=" in lower:
+            raise ValidationError("raw_expansion_metadata_value", f"payload.{key} contains token-shaped data")
+        if key in {"target_hash", "audit_receipt_hash"}:
+            if trimmed and not bounded_hash_value(trimmed):
+                raise ValidationError(
+                    "invalid_expansion_metadata_hash",
+                    f"payload.{key} must be a pseudonymous sha256 hash",
+                )
+            return
+        if not bounded_metadata_value(trimmed) or phone_like_value(trimmed):
+            raise ValidationError(
+                "raw_expansion_metadata_value",
+                f"payload.{key} must be a bounded metadata token",
+            )
+        return
+    if isinstance(value, bool) or isinstance(value, int) or isinstance(value, float):
+        return
+    raise ValidationError(
+        "invalid_expansion_metadata_value",
+        f"payload.{key} must be a scalar metadata value",
+    )
+
+
+def bounded_metadata_value(value: str) -> bool:
+    if not value or len(value) > 96:
+        return False
+    return all(ch.isalnum() or ch in {"_", "-", "."} for ch in value)
+
+
+def bounded_hash_value(value: str) -> bool:
+    prefix = "sha256:"
+    return value.startswith(prefix) and bounded_metadata_value(value.removeprefix(prefix))
+
+
+def phone_like_value(value: str) -> bool:
+    return sum(1 for ch in value if ch.isdigit()) >= 7
 
 
 def normalize_key(key: str) -> str:

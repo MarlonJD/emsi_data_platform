@@ -173,6 +173,14 @@ Kafka publish, landing, and local dbt/Soda/Dagster checks. It does not prove
 production source windows, retention approval, production Feed ML readiness,
 model serving, rollout approval, ClickHouse adoption, or owner approval.
 
+The 2026-06-20 required expansion contract also allows metadata-only
+`admin_reveal_audit_recorded` and `admin_note_metadata_recorded` events after Go
+API validation. These events may not carry raw contact values, reveal payloads,
+raw reasons, note bodies, messages, raw content, request/response bodies,
+screenshots, tokens, or exact GPS/location fields. Required contact/support
+reveal audit truth remains `app.staff_ops_audit`, not the optional analytics
+stream.
+
 ## Optional Profiles
 
 ```sh

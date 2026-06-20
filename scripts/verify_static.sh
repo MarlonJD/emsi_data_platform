@@ -39,8 +39,14 @@ test -f dbt/models/raw_vault/hub_analytics_event.sql
 grep -q "event_business_key" dbt/models/raw_vault/hub_analytics_event.sql
 grep -q "name: analytics_postgres" soda/configuration.yml
 grep -q "dataset: analytics_postgres/analytics/analytics/raw_event_landing" soda/contracts/raw_event_landing.yml
+grep -q "note_body" soda/contracts/raw_event_landing.yml
+grep -q "reveal_payload" soda/contracts/raw_event_landing.yml
+grep -q "exact_gps" soda/contracts/raw_event_landing.yml
 grep -q "soda contract verify" scripts/run_phase_d_smoke.sh
 grep -q "phase_d_local_smoke_job" dagster_project/definitions.py
+grep -q "note_body" dagster_project/definitions.py
+grep -q "reveal_payload" dagster_project/definitions.py
+grep -q "exact_gps" dagster_project/definitions.py
 grep -q "soda-core==4.14.0" pyproject.toml
 grep -q "soda-postgres==4.14.0" pyproject.toml
 
@@ -61,6 +67,10 @@ if grep -R "payload_preview\\|raw_payload" ingest_worker sql docker-compose.yml;
   echo "raw DLQ payload storage found in ingest path" >&2
   exit 1
 fi
+
+grep -q "\"note\"" ingest_worker/worker.py
+grep -q "\"revealpayload\"" ingest_worker/worker.py
+grep -q "\"exactgps\"" ingest_worker/worker.py
 
 if grep -R "clickhouse/clickhouse-server:latest\\|clickhouse/clickhouse-server:head" versions.env docker-compose.yml; then
   echo "unpinned ClickHouse image found" >&2

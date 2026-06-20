@@ -16,8 +16,18 @@ SODA_CONTRACT_PATH = Path(
 )
 
 BLOCKED_IDENTIFIER_PATTERN = (
-    r'("email"|"phone"|"authorization"|"token"|"user_id"|"userId"|'
-    r'"raw_user_id"|"actor_user_id"|"actorUserId")'
+    r'("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|'
+    r'"auth_token"|"access_token"|"refresh_token"|"session_token"|"api_key"|'
+    r'"cookie"|"signed_url"|"full_url"|"user_id"|"userId"|"raw_user_id"|'
+    r'"actor_user_id"|"actorUserId"|"staff_id"|"target_user_id"|'
+    r'"body"|"message"|"note"|"note_body"|"raw_note"|"raw_note_text"|'
+    r'"internal_note"|"private_note"|"applicant_message"|"feedback_message"|'
+    r'"search_text"|"raw_search_text"|"raw_text"|"raw_content"|"post_body"|'
+    r'"comment_body"|"reply_body"|"dm_content"|"raw_policy_text"|'
+    r'"request_body"|"response_body"|"transcript"|"screenshot"|"view_hierarchy"|'
+    r'"support_payload"|"support_contact"|"contact_payload"|"reveal_payload"|'
+    r'"reveal_value"|"contact_value"|"payload_value"|"exact_gps"|"gps"|'
+    r'"latitude"|"longitude"|"lat"|"lon")'
 )
 
 

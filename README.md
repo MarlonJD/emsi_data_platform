@@ -98,7 +98,8 @@ Raw Vault-compatible models over `analytics.raw_event_landing`. The dbt views
 carry hashes and bounded event metadata, not raw `subject` or `payload` JSON.
 The smoke then runs the Soda v4 local contract for non-empty landing data,
 unique event ids, valid event timestamps, allowed privacy classes, and blocked
-raw personal identifier keys.
+raw personal identifier, contact/reveal payload, note/body/message, raw-content,
+request/response body, screenshot, token, and exact GPS/location keys.
 The Dagster `phase_d_local_smoke_job` executes the same local ingest/dbt/Soda
 flow as orchestration evidence. This is local-dev evidence only, not production
 data-quality readiness.
@@ -117,6 +118,12 @@ ClickHouse candidate schema, copies only bounded/hash event columns into
 aggregate, and compares the same bounded hourly aggregate against PostgreSQL.
 The printed timing is a local candidate benchmark only; it does not justify
 default startup or production use.
+
+The 2026-06-20 required expansion contract adds metadata-only
+`admin_reveal_audit_recorded` and `admin_note_metadata_recorded` event names for
+approved local/dev mirrors. Required contact/support reveal audit evidence still
+belongs to `app.staff_ops_audit`, and ClickHouse remains non-canonical until a
+separate production hot-analytics promotion gate passes.
 
 ## iOS Limited Production Canary Capture
 

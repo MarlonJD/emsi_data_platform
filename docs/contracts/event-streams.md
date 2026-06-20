@@ -92,13 +92,25 @@ Allowed smoke families:
   and `screen_viewed`.
 - Admin Console usage/action-visibility analytics: `admin_surface_viewed` and
   `admin_action_visibility_viewed`.
+- Metadata-only Admin expansion contracts:
+  `admin_reveal_audit_recorded` and `admin_note_metadata_recorded`.
 
 Admin smoke payloads may contain only bounded surface/module/screen/action
 state fields and optional pseudonymous `target_hash`. Raw user ids, staff ids,
 emails, phones, support/contact reveal payloads, free-form notes, raw policy
 text, screenshots, full URLs, request/response bodies, auth tokens, and secrets
-are outside the contract. Required staff security/audit telemetry, if later
-approved, must use a separate stream or contract.
+are outside the contract. Reveal audit mirrors, when approved, may carry only
+field classes, result buckets, actor role/scope buckets, reason length/category,
+confirmation state, authorization outcome, audit action key,
+`sha256:` `audit_receipt_hash`, target type, and optional `sha256:`
+`target_hash`. Note metadata may carry only note surface/type/action, length
+bucket, sensitivity/redaction class, attachment flag, approved language bucket,
+lifecycle buckets, target type, and optional `sha256:` `target_hash`.
+Required staff security/audit telemetry remains separate from optional product
+analytics; `app.staff_ops_audit` is the canonical contact/support reveal audit
+source. Expansion metadata string values must be bounded tokens, and hash fields
+must be `sha256:` values; raw prose, contact-shaped values, URLs, tokens, and
+phone-shaped values are rejected before landing.
 
 ## Data-Platform Consumer Status
 
@@ -128,7 +140,9 @@ Status: Phase D local-dev dbt/Soda/Dagster smoke implemented.
   bounded event metadata, not raw `subject` or `payload` JSON.
 - Soda checks `analytics.raw_event_landing` for non-empty data, unique
   `event_id`, timestamp order, allowed privacy classes, and blocked raw
-  personal identifier keys in subject or payload fields.
+  personal identifier, contact/reveal payload, note/body/message, raw-content,
+  request/response body, screenshot, token, and exact GPS/location keys in
+  subject or payload fields.
 - Dagster exposes `phase_d_local_smoke_job` to run the landing guardrail check,
   dbt smoke, and Soda scan as a local orchestration path.
 - The checks are local integration evidence only. Production data-quality
