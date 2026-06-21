@@ -30,6 +30,81 @@ BLOCKED_IDENTIFIER_PATTERN = (
     r'"latitude"|"longitude"|"lat"|"lon")'
 )
 
+PRODUCT_REPORTING_PHASE1_ASSETS = {
+    "stage.stg_product_reporting_content_events": {
+        "group": "product_reporting_stage",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "no_raw_content_text, stable_content_key, bounded_occupation_cohort, source_lineage_present",
+    },
+    "stage.stg_product_reporting_reactions": {
+        "group": "product_reporting_stage",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "valid_reaction_action, stable_reaction_key, bounded_emoji_key, reaction_valence_present",
+    },
+    "stage.stg_product_reporting_feed_events": {
+        "group": "product_reporting_stage",
+        "cadence": "operational_ingest_15m_job",
+        "freshness": "<= 15 minutes",
+        "checks": "accepted_feed_event_names_only, source_completeness_label_present, interest_proxy_valence_present",
+    },
+    "raw_vault.hub_reporting_content": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hub_hash_key_not_null, hub_hash_key_unique",
+    },
+    "raw_vault.hub_reporting_reaction": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hub_hash_key_not_null, hub_hash_key_unique",
+    },
+    "raw_vault.hub_reporting_feed_item": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "operational_ingest_15m_job",
+        "freshness": "<= 15 minutes",
+        "checks": "hub_hash_key_not_null, hub_hash_key_unique",
+    },
+    "raw_vault.link_reporting_reaction_content": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "link_hash_key_not_null, linked_hubs_present",
+    },
+    "raw_vault.link_reporting_feed_item_content": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "operational_ingest_15m_job",
+        "freshness": "<= 15 minutes",
+        "checks": "link_hash_key_not_null, linked_hubs_present",
+    },
+    "raw_vault.sat_reporting_content_event": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hashdiff_present, forbidden_raw_fields_absent",
+    },
+    "raw_vault.sat_reporting_reaction_event": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hashdiff_present, forbidden_raw_fields_absent",
+    },
+    "raw_vault.sat_reporting_feed_serving_event": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "operational_ingest_15m_job",
+        "freshness": "<= 15 minutes",
+        "checks": "hashdiff_present, no_raw_model_score, forbidden_raw_fields_absent",
+    },
+    "raw_vault.product_reporting_stage_reconciliation": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "source_to_stage_counts_present, missing_business_key_count_visible",
+    },
+}
+
 
 @asset(group_name="platform_baseline")
 def platform_baseline_decisions() -> dict[str, str]:
@@ -40,6 +115,73 @@ def platform_baseline_decisions() -> dict[str, str]:
         "data_vault": "baseline: ScalefreeCOM/datavault4dbt==1.18.3",
         "soda": "local-dev: soda-core==4.14.0 and soda-postgres==4.14.0",
     }
+
+
+def product_reporting_asset_contract(context: Any, asset_key: str) -> dict[str, str]:
+    contract = PRODUCT_REPORTING_PHASE1_ASSETS[asset_key]
+    metadata = {"asset_key": asset_key, **contract}
+    context.add_output_metadata(metadata)
+    return metadata
+
+
+@asset(name="stg_product_reporting_content_events", key_prefix=["stage"], group_name="product_reporting_stage")
+def stg_product_reporting_content_events_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "stage.stg_product_reporting_content_events")
+
+
+@asset(name="stg_product_reporting_reactions", key_prefix=["stage"], group_name="product_reporting_stage")
+def stg_product_reporting_reactions_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "stage.stg_product_reporting_reactions")
+
+
+@asset(name="stg_product_reporting_feed_events", key_prefix=["stage"], group_name="product_reporting_stage")
+def stg_product_reporting_feed_events_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "stage.stg_product_reporting_feed_events")
+
+
+@asset(name="hub_reporting_content", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def hub_reporting_content_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.hub_reporting_content")
+
+
+@asset(name="hub_reporting_reaction", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def hub_reporting_reaction_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.hub_reporting_reaction")
+
+
+@asset(name="hub_reporting_feed_item", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def hub_reporting_feed_item_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.hub_reporting_feed_item")
+
+
+@asset(name="link_reporting_reaction_content", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def link_reporting_reaction_content_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.link_reporting_reaction_content")
+
+
+@asset(name="link_reporting_feed_item_content", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def link_reporting_feed_item_content_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.link_reporting_feed_item_content")
+
+
+@asset(name="sat_reporting_content_event", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def sat_reporting_content_event_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.sat_reporting_content_event")
+
+
+@asset(name="sat_reporting_reaction_event", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def sat_reporting_reaction_event_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.sat_reporting_reaction_event")
+
+
+@asset(name="sat_reporting_feed_serving_event", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def sat_reporting_feed_serving_event_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.sat_reporting_feed_serving_event")
+
+
+@asset(name="product_reporting_stage_reconciliation", key_prefix=["raw_vault"], group_name="product_reporting_quality")
+def product_reporting_stage_reconciliation_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.product_reporting_stage_reconciliation")
 
 
 @asset(group_name="phase_d_local_smoke")
@@ -166,13 +308,34 @@ phase_d_local_smoke_job = define_asset_job(
     selection=AssetSelection.groups("phase_d_local_smoke"),
 )
 
+product_reporting_phase1_stage_rdv_job = define_asset_job(
+    name="product_reporting_phase1_stage_rdv_job",
+    selection=(
+        AssetSelection.groups("product_reporting_stage")
+        | AssetSelection.groups("product_reporting_raw_vault")
+        | AssetSelection.groups("product_reporting_quality")
+    ),
+)
+
 
 defs = Definitions(
     assets=[
         platform_baseline_decisions,
+        stg_product_reporting_content_events_contract,
+        stg_product_reporting_reactions_contract,
+        stg_product_reporting_feed_events_contract,
+        hub_reporting_content_contract,
+        hub_reporting_reaction_contract,
+        hub_reporting_feed_item_contract,
+        link_reporting_reaction_content_contract,
+        link_reporting_feed_item_content_contract,
+        sat_reporting_content_event_contract,
+        sat_reporting_reaction_event_contract,
+        sat_reporting_feed_serving_event_contract,
+        product_reporting_stage_reconciliation_contract,
         analytics_raw_event_landing_smoke,
         dbt_phase_d_smoke,
         soda_raw_event_landing_scan,
     ],
-    jobs=[phase_d_local_smoke_job],
+    jobs=[phase_d_local_smoke_job, product_reporting_phase1_stage_rdv_job],
 )

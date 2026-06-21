@@ -50,6 +50,34 @@ test -f dbt/models/staging/stg_analytics_events.sql
 grep -q "event_hk" dbt/models/staging/stg_analytics_events.sql
 test -f dbt/models/raw_vault/hub_analytics_event.sql
 grep -q "event_business_key" dbt/models/raw_vault/hub_analytics_event.sql
+test -f dbt/models/staging/stg_product_reporting_content_events.sql
+test -f dbt/models/staging/stg_product_reporting_reactions.sql
+test -f dbt/models/staging/stg_product_reporting_feed_events.sql
+test -f dbt/models/raw_vault/hub_reporting_content.sql
+test -f dbt/models/raw_vault/hub_reporting_reaction.sql
+test -f dbt/models/raw_vault/hub_reporting_feed_item.sql
+test -f dbt/models/raw_vault/link_reporting_reaction_content.sql
+test -f dbt/models/raw_vault/link_reporting_feed_item_content.sql
+test -f dbt/models/raw_vault/sat_reporting_content_event.sql
+test -f dbt/models/raw_vault/sat_reporting_reaction_event.sql
+test -f dbt/models/raw_vault/sat_reporting_feed_serving_event.sql
+test -f dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+grep -q "product_reporting_phase1" dbt/models/staging/stg_product_reporting_content_events.sql
+grep -q "source_completeness_input" dbt/models/staging/stg_product_reporting_feed_events.sql
+grep -q "occupation_cohort_key" dbt/models/staging/stg_product_reporting_content_events.sql
+grep -q "emoji_key" dbt/models/staging/stg_product_reporting_reactions.sql
+grep -q "reaction_valence" dbt/models/staging/stg_product_reporting_reactions.sql
+grep -q "interest_proxy_valence" dbt/models/staging/stg_product_reporting_feed_events.sql
+grep -q "product_reporting_stage_reconciliation" dagster_project/definitions.py
+grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
+if grep -R "tracking_token" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql; then
+  echo "product reporting models must not expose or derive from tracking tokens" >&2
+  exit 1
+fi
+if grep -R "raw_content\\|post_body\\|comment_body\\|reply_body\\|dm_content\\|transcript\\|screenshot\\|exact_gps\\|contact_value\\|reveal_value\\|request_body\\|response_body" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql; then
+  echo "product reporting models must not project blocked raw content/contact/location fields" >&2
+  exit 1
+fi
 grep -q "name: analytics_postgres" soda/configuration.yml
 grep -q "dataset: analytics_postgres/analytics/analytics/raw_event_landing" soda/contracts/raw_event_landing.yml
 grep -q "note_body" soda/contracts/raw_event_landing.yml

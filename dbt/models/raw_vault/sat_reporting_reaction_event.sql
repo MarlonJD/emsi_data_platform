@@ -1,0 +1,36 @@
+{{ config(materialized="view", tags=["product_reporting_phase1", "data_vault"]) }}
+
+select
+  reaction_hk,
+  reaction_hashdiff as hashdiff,
+  load_datetime,
+  record_source,
+  event_id,
+  event_name,
+  event_version,
+  reporting_date,
+  occurred_at,
+  received_at,
+  content_business_key,
+  content_type,
+  channel_business_key,
+  reaction_action,
+  reaction_kind,
+  reaction_key,
+  emoji_key,
+  emoji_business_key,
+  reaction_valence,
+  occupation_cohort_key,
+  privacy_class,
+  consent_scope,
+  surface,
+  action_source,
+  feed_mode,
+  reason_key,
+  source_topic,
+  source_partition,
+  source_offset,
+  raw_record_sha256,
+  payload_sha256
+from {{ ref("stg_product_reporting_reactions") }}
+where reaction_hk is not null
