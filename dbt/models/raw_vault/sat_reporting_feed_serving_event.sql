@@ -38,6 +38,7 @@ select
   action_source,
   privacy_class,
   consent_scope,
+  subject_user_hk,
   source_completeness_input,
   source_topic,
   source_partition,

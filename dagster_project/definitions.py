@@ -105,6 +105,62 @@ PRODUCT_REPORTING_PHASE1_ASSETS = {
     },
 }
 
+PRODUCT_REPORTING_PHASE2_ASSETS = {
+    "business_vault.pit_reporting_content_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "content_key_present, daily_pit_grain, suppression_status_present",
+    },
+    "business_vault.br_content_reaction_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "reaction_bridge_grain, bounded_emoji_key, suppression_status_present",
+    },
+    "business_vault.br_feed_interest_proxy": {
+        "group": "product_reporting_business_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "proxy_wording_present, source_completeness_label_present, suppression_status_present",
+    },
+    "business_vault.s_occupation_cohort_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "unknown_bucket_present, small_cell_suppression_present, canonical_app_source_gap_labeled",
+    },
+    "business_vault.s_content_performance_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "metric_contract_ids_present, no_raw_text_columns, suppression_status_present",
+    },
+    "business_vault.s_emoji_usage_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "bounded_emoji_key, net_usage_formula_present, suppression_status_present",
+    },
+    "business_vault.s_reaction_valence_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "explicit_signal_wording, valence_bucket_present, suppression_status_present",
+    },
+    "business_vault.product_reporting_bdv_contract_coverage": {
+        "group": "product_reporting_business_vault_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "phase2_metric_contracts_covered, wording_status_present, suppression_rule_present",
+    },
+}
+
+PRODUCT_REPORTING_ASSETS = {
+    **PRODUCT_REPORTING_PHASE1_ASSETS,
+    **PRODUCT_REPORTING_PHASE2_ASSETS,
+}
+
 
 @asset(group_name="platform_baseline")
 def platform_baseline_decisions() -> dict[str, str]:
@@ -118,7 +174,7 @@ def platform_baseline_decisions() -> dict[str, str]:
 
 
 def product_reporting_asset_contract(context: Any, asset_key: str) -> dict[str, str]:
-    contract = PRODUCT_REPORTING_PHASE1_ASSETS[asset_key]
+    contract = PRODUCT_REPORTING_ASSETS[asset_key]
     metadata = {"asset_key": asset_key, **contract}
     context.add_output_metadata(metadata)
     return metadata
@@ -182,6 +238,50 @@ def sat_reporting_feed_serving_event_contract(context) -> dict[str, str]:
 @asset(name="product_reporting_stage_reconciliation", key_prefix=["raw_vault"], group_name="product_reporting_quality")
 def product_reporting_stage_reconciliation_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "raw_vault.product_reporting_stage_reconciliation")
+
+
+@asset(name="pit_reporting_content_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def pit_reporting_content_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.pit_reporting_content_daily")
+
+
+@asset(name="br_content_reaction_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def br_content_reaction_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.br_content_reaction_daily")
+
+
+@asset(name="br_feed_interest_proxy", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def br_feed_interest_proxy_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.br_feed_interest_proxy")
+
+
+@asset(name="s_occupation_cohort_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_occupation_cohort_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_occupation_cohort_daily")
+
+
+@asset(name="s_content_performance_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_content_performance_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_content_performance_daily")
+
+
+@asset(name="s_emoji_usage_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_emoji_usage_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_emoji_usage_daily")
+
+
+@asset(name="s_reaction_valence_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_reaction_valence_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_reaction_valence_daily")
+
+
+@asset(
+    name="product_reporting_bdv_contract_coverage",
+    key_prefix=["business_vault"],
+    group_name="product_reporting_business_vault_quality",
+)
+def product_reporting_bdv_contract_coverage_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.product_reporting_bdv_contract_coverage")
 
 
 @asset(group_name="phase_d_local_smoke")
@@ -317,6 +417,14 @@ product_reporting_phase1_stage_rdv_job = define_asset_job(
     ),
 )
 
+product_reporting_phase2_bdv_job = define_asset_job(
+    name="product_reporting_phase2_bdv_job",
+    selection=(
+        AssetSelection.groups("product_reporting_business_vault")
+        | AssetSelection.groups("product_reporting_business_vault_quality")
+    ),
+)
+
 
 defs = Definitions(
     assets=[
@@ -333,9 +441,17 @@ defs = Definitions(
         sat_reporting_reaction_event_contract,
         sat_reporting_feed_serving_event_contract,
         product_reporting_stage_reconciliation_contract,
+        pit_reporting_content_daily_contract,
+        br_content_reaction_daily_contract,
+        br_feed_interest_proxy_contract,
+        s_occupation_cohort_daily_contract,
+        s_content_performance_daily_contract,
+        s_emoji_usage_daily_contract,
+        s_reaction_valence_daily_contract,
+        product_reporting_bdv_contract_coverage_contract,
         analytics_raw_event_landing_smoke,
         dbt_phase_d_smoke,
         soda_raw_event_landing_scan,
     ],
-    jobs=[phase_d_local_smoke_job, product_reporting_phase1_stage_rdv_job],
+    jobs=[phase_d_local_smoke_job, product_reporting_phase1_stage_rdv_job, product_reporting_phase2_bdv_job],
 )

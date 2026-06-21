@@ -44,6 +44,7 @@ select
   privacy_class,
   consent_scope,
   subject_user_hash,
+  subject_user_hk,
   subject_session_id,
   surface,
   action_source,

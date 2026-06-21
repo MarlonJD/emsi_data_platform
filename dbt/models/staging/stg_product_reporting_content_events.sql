@@ -65,6 +65,7 @@ select
   privacy_class,
   consent_scope,
   subject_user_hash,
+  md5(subject_user_hash) as subject_user_hk,
   subject_session_id,
   payload ->> 'surface' as surface,
   payload ->> 'source' as action_source,

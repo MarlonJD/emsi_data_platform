@@ -22,3 +22,6 @@ models:
       +materialized: view
       +tags:
         - phase_d_smoke
+    business_vault:
+      +schema: business_vault
+      +materialized: view
