@@ -217,6 +217,37 @@ ranking disabled. Data Platform local smokes still validate accepted bounded
 feed telemetry and forbidden-field rejection; they do not approve shadow
 scoring, canary rollout, production ML readiness, or ClickHouse adoption.
 
+## Required Analytics External Evidence Gate
+
+The Required Analytics Collection Expansion Plan is not closed by rerunning
+local smokes. Use the external capture helper only with an approved production
+or staging-production-equivalent target:
+
+```sh
+cp .env.required-analytics.example .env.required-analytics
+./scripts/run_required_analytics_capture.sh \
+  --preflight-only \
+  --evidence-json /private/tmp/emsi-required-analytics-preflight.json \
+  --evidence-md /private/tmp/emsi-required-analytics-preflight.md
+```
+
+After preflight passes, run the controlled Admin panel scenario with the seeded
+staff user, produce any enabled Feed ML and ClickHouse lane artifacts, run the
+downstream dbt/Soda/Dagster checks, then capture:
+
+```sh
+EMSI_REQUIRED_ANALYTICS_ALLOW_CAPTURE=true \
+./scripts/run_required_analytics_capture.sh \
+  --evidence-json /private/tmp/emsi-required-analytics-evidence.json \
+  --evidence-md /private/tmp/emsi-required-analytics-evidence.md
+```
+
+The helper requires bounded owner approval ids, source window, seeded user ref,
+subject hash, privacy artifact, read-only warehouse DSN, downstream artifacts,
+lane-specific artifacts, and stop/rollback outcome. It fails closed for local
+DSNs, fixture values, missing capture opt-in, raw/unsupported Admin payload
+fields, nonzero DLQ, or missing expected Admin/reveal/note event names.
+
 ## Optional Profiles
 
 ```sh

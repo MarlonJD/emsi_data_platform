@@ -137,6 +137,90 @@ ranking remains `rules_v1`, shadow mode remains `disabled` unless a separate
 approved `score_log_only` evidence path exists, and production ML readiness
 remains fail-closed.
 
+## Required Analytics External Evidence Capture
+
+Use this helper for the Required Analytics Collection Expansion Plan external
+evidence gate. It does not emit app events and does not replace the controlled
+Admin panel scenario. Its job is to fail closed when the approved
+production/staging-equivalent target, seeded staff user, owner approvals,
+privacy artifact, warehouse/check access, or downstream artifacts are missing,
+then capture bounded warehouse evidence after the real scenario runs.
+
+Preflight before starting the external scenario:
+
+```sh
+cp .env.required-analytics.example .env.required-analytics
+# Fill `.env.required-analytics` with the approved target, seeded staff user,
+# approval ids, privacy artifact, warehouse DSN, and source window.
+./scripts/run_required_analytics_capture.sh \
+  --preflight-only \
+  --evidence-json /private/tmp/emsi-required-analytics-preflight.json \
+  --evidence-md /private/tmp/emsi-required-analytics-preflight.md
+```
+
+After preflight passes, run the controlled external scenario for the enabled
+lanes:
+
+- Open Admin Console as the seeded staff user.
+- Exercise bounded Admin surface/action visibility.
+- Run contact reveal success plus denied or invalid path checks.
+- Submit Admin decision note metadata without raw note text.
+- Generate the Feed ML serving collection artifact from approved sources when
+  the `feedml` lane is enabled.
+- Generate ClickHouse candidate parity evidence only when the `clickhouse` lane
+  is enabled; this does not make ClickHouse canonical or production-enabled.
+
+Capture after the scenario and downstream checks complete:
+
+```sh
+EMSI_REQUIRED_ANALYTICS_ALLOW_CAPTURE=true \
+./scripts/run_required_analytics_capture.sh \
+  --evidence-json /private/tmp/emsi-required-analytics-evidence.json \
+  --evidence-md /private/tmp/emsi-required-analytics-evidence.md
+```
+
+The wrapper loads `.env.required-analytics` automatically when present, or
+another approved bundle passed with `--env-file <path>` /
+`EMSI_REQUIRED_ANALYTICS_ENV_FILE`. The loader accepts only plain
+`EMSI_REQUIRED_ANALYTICS_*=value` assignments and does not execute shell code
+from the env file.
+
+Required preflight inputs:
+
+| Environment variable | Purpose |
+| --- | --- |
+| `EMSI_REQUIRED_ANALYTICS_TARGET_NAME` | Non-PII approved target name; local/dev/test names are rejected. |
+| `EMSI_REQUIRED_ANALYTICS_TARGET_CLASS` | `production` or `staging-production-equivalent`. |
+| `EMSI_REQUIRED_ANALYTICS_LANES` | Comma list from `admin`, `reveal`, `note`, `feedml`, and `clickhouse`. |
+| `EMSI_REQUIRED_ANALYTICS_APPROVAL_IDS` | Comma-separated durable owner approval ids for the included lanes. |
+| `EMSI_REQUIRED_ANALYTICS_SEEDED_USER_REF` | Non-PII seeded staff user reference. |
+| `EMSI_REQUIRED_ANALYTICS_SUBJECT_USER_HASH` | Pseudonymous 64-hex subject hash used for warehouse filtering. |
+| `EMSI_REQUIRED_ANALYTICS_EVENT_ID_PREFIX` | Per-run event id prefix emitted by the real external scenario path. |
+| `EMSI_REQUIRED_ANALYTICS_WINDOW_START` | ISO-8601 source window start with timezone. |
+| `EMSI_REQUIRED_ANALYTICS_WINDOW_END` | ISO-8601 source window end with timezone; duration must be 60-1800 seconds. |
+| `EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN` | Read-only production/staging-equivalent warehouse DSN; local/dev markers and `sslmode=disable` are rejected. |
+| `EMSI_REQUIRED_ANALYTICS_PRIVACY_ARTIFACT` | Durable privacy/consent evidence id or path. |
+
+Required capture inputs after scenario and downstream checks:
+
+| Environment variable | Purpose |
+| --- | --- |
+| `EMSI_REQUIRED_ANALYTICS_ADMIN_SCENARIO_STATUS` and `EMSI_REQUIRED_ANALYTICS_ADMIN_SCENARIO_ARTIFACT` | Required when `admin`, `reveal`, or `note` is enabled; status must be `passed`. |
+| `EMSI_REQUIRED_ANALYTICS_DBT_STATUS` and `EMSI_REQUIRED_ANALYTICS_DBT_ARTIFACT` | dbt must be `passed` with an artifact id or path. |
+| `EMSI_REQUIRED_ANALYTICS_SODA_STATUS` and `EMSI_REQUIRED_ANALYTICS_SODA_ARTIFACT` | Soda must be `passed` with an artifact id or path. |
+| `EMSI_REQUIRED_ANALYTICS_DAGSTER_STATUS` and `EMSI_REQUIRED_ANALYTICS_DAGSTER_ARTIFACT` | Dagster must be `passed` with an artifact id or run id. |
+| `EMSI_REQUIRED_ANALYTICS_FEEDML_COLLECTION_STATUS` and `EMSI_REQUIRED_ANALYTICS_FEEDML_COLLECTION_ARTIFACT` | Required when `feedml` is enabled; status must be `passed`. |
+| `EMSI_REQUIRED_ANALYTICS_CLICKHOUSE_PARITY_STATUS` and `EMSI_REQUIRED_ANALYTICS_CLICKHOUSE_PARITY_ARTIFACT` | Required when `clickhouse` is enabled; status must be `passed` for candidate parity only. |
+| `EMSI_REQUIRED_ANALYTICS_STOP_ROLLBACK_OUTCOME` | Stop or rollback outcome for the external source window. |
+
+The evidence JSON and Markdown intentionally redact the warehouse DSN and
+subject hash. They report target class, lane scope, seeded user reference,
+source window, approval ids, landing count, DLQ count, accepted event-name
+counts, forbidden-field result, downstream checks, lane artifacts, success
+criteria, and stop/rollback outcome. Raw PII, reveal payload values, raw note
+text, raw content, tokens, request/response bodies, screenshots, raw crash
+envelopes, warehouse secrets, and exact GPS must not be supplied.
+
 ## iOS Limited Production Canary Capture
 
 Use this helper only for the accepted-risk iOS limited canary approved by

@@ -22,5 +22,6 @@ dbt/target/
 .env.*
 !.env.example
 !.env.canary.example
+!.env.required-analytics.example
 .venv/
 venv/
