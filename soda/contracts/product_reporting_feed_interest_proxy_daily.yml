@@ -1,0 +1,53 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_feed_interest_proxy_daily
+
+checks:
+  - failed_rows:
+      name: Feed interest proxy inputs are bounded
+      qualifier: feed_interest_proxy_inputs_bounded
+      expression: |
+        qualified_impression_count < 0
+        OR positive_action_count < 0
+        OR negative_action_count < 0
+        OR dwell_ms_total < 0
+        OR feed_interest_proxy_score IS NULL
+  - failed_rows:
+      name: Feed interest source completeness is labeled
+      qualifier: source_completeness_label_allowed
+      expression: |
+        source_completeness_label IS NULL
+        OR source_completeness_label NOT IN ('partial', 'complete')
+        OR source_completeness_detail IS NULL
+        OR source_completeness_detail NOT IN (
+          'accepted_feed_events_with_occupation_cohort',
+          'accepted_feed_events_only'
+        )
+  - failed_rows:
+      name: Feed interest wording and timezone are contract-safe
+      qualifier: wording_timezone_contract_safe
+      expression: |
+        wording_status <> 'proxy/partial'
+        OR reporting_timezone <> 'Europe/Istanbul'
+        OR metric_contract_ids <> 'feed_interest_proxy_score_daily,feed_interest_source_completeness_daily'
+        OR refreshed_at IS NULL
+
+columns:
+  - name: reporting_date
+    checks:
+      - missing:
+          name: Reporting date is present
+  - name: feed_item_reporting_key
+    checks:
+      - missing:
+          name: Feed item reporting key is present
+  - name: occupation_cohort_key
+    checks:
+      - missing:
+          name: Occupation cohort key is present
+  - name: feed_mode
+    checks:
+      - missing:
+          name: Feed mode is present
+  - name: surface
+    checks:
+      - missing:
+          name: Surface is present

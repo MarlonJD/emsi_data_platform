@@ -1,0 +1,42 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_reaction_valence_daily
+
+checks:
+  - failed_rows:
+      name: Reaction valence counts are formula-safe
+      qualifier: reaction_valence_formula
+      expression: |
+        reaction_valence_count < 0
+        OR added_reaction_count < 0
+        OR removed_reaction_count < 0
+        OR reaction_valence_count <> added_reaction_count + removed_reaction_count
+  - failed_rows:
+      name: Reaction valence source completeness is labeled
+      qualifier: source_completeness_label_allowed
+      expression: |
+        source_completeness_label IS NULL
+        OR source_completeness_label NOT IN ('partial', 'complete')
+  - failed_rows:
+      name: Reaction valence wording and timezone are contract-safe
+      qualifier: wording_timezone_contract_safe
+      expression: |
+        wording_status <> 'explicit-signal-only'
+        OR reporting_timezone <> 'Europe/Istanbul'
+        OR metric_contract_ids <> 'reaction_valence_count_daily,positive_reaction_day_daily,negative_reaction_day_daily'
+        OR refreshed_at IS NULL
+
+columns:
+  - name: reporting_date
+    checks:
+      - missing:
+          name: Reporting date is present
+  - name: reaction_valence
+    checks:
+      - missing:
+          name: Reaction valence is present
+      - invalid:
+          name: Reaction valence is allowed
+          valid_values: ["positive", "negative", "neutral", "unknown"]
+  - name: occupation_cohort_key
+    checks:
+      - missing:
+          name: Occupation cohort key is present

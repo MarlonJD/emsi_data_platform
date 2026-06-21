@@ -1,0 +1,48 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_occupation_cohort_daily
+
+checks:
+  - failed_rows:
+      name: Occupation cohort metrics are bounded
+      qualifier: bounded_counts_and_share
+      expression: |
+        distinct_user_count < 0
+        OR total_user_count < 0
+        OR distinct_user_count > total_user_count
+        OR occupation_cohort_share < 0
+        OR occupation_cohort_share > 1
+  - failed_rows:
+      name: Occupation cohort source completeness is labeled
+      qualifier: source_completeness_label_allowed
+      expression: |
+        source_completeness_label IS NULL
+        OR source_completeness_label NOT IN ('partial', 'complete')
+  - failed_rows:
+      name: Occupation cohort wording and timezone are contract-safe
+      qualifier: wording_timezone_contract_safe
+      expression: |
+        wording_status <> 'direct'
+        OR reporting_timezone <> 'Europe/Istanbul'
+        OR metric_contract_ids <> 'occupation_cohort_user_count_daily,occupation_cohort_share_daily'
+        OR refreshed_at IS NULL
+
+columns:
+  - name: reporting_date
+    checks:
+      - missing:
+          name: Reporting date is present
+  - name: occupation_cohort_key
+    checks:
+      - missing:
+          name: Occupation cohort key is present
+  - name: distinct_user_count
+    checks:
+      - missing:
+          name: Distinct user count is present
+  - name: total_user_count
+    checks:
+      - missing:
+          name: Total user count is present
+  - name: source_completeness_detail
+    checks:
+      - missing:
+          name: Source completeness detail is present

@@ -1,0 +1,50 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_content_performance_daily
+
+checks:
+  - failed_rows:
+      name: Content performance counts are bounded
+      qualifier: bounded_content_counts
+      expression: |
+        positive_reaction_count < 0
+        OR like_like_reaction_count < 0
+        OR reply_count < 0
+        OR share_or_open_count < 0
+        OR hide_or_report_count < 0
+  - failed_rows:
+      name: Content performance source completeness is labeled
+      qualifier: source_completeness_label_allowed
+      expression: |
+        source_completeness_label IS NULL
+        OR source_completeness_label NOT IN ('partial', 'complete')
+  - failed_rows:
+      name: Content performance wording and timezone are contract-safe
+      qualifier: wording_timezone_contract_safe
+      expression: |
+        wording_status <> 'direct/proxy'
+        OR reporting_timezone <> 'Europe/Istanbul'
+        OR metric_contract_ids <> 'most_liked_content_daily,content_performance_score_daily'
+        OR refreshed_at IS NULL
+  - failed_rows:
+      name: Most-liked rank inputs are present
+      qualifier: most_liked_rank_inputs_present
+      expression: |
+        content_performance_score IS NULL
+        OR most_liked_rank_score IS NULL
+
+columns:
+  - name: reporting_date
+    checks:
+      - missing:
+          name: Reporting date is present
+  - name: content_reporting_key
+    checks:
+      - missing:
+          name: Content reporting key is present
+  - name: content_type
+    checks:
+      - missing:
+          name: Content type is present
+  - name: source_completeness_label
+    checks:
+      - missing:
+          name: Source completeness label is present

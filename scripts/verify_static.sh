@@ -111,6 +111,17 @@ grep -q "dataset: analytics_postgres/analytics/analytics/raw_event_landing" soda
 grep -q "note_body" soda/contracts/raw_event_landing.yml
 grep -q "reveal_payload" soda/contracts/raw_event_landing.yml
 grep -q "exact_gps" soda/contracts/raw_event_landing.yml
+test -f soda/contracts/product_reporting_occupation_cohort_daily.yml
+test -f soda/contracts/product_reporting_content_performance_daily.yml
+test -f soda/contracts/product_reporting_emoji_reaction_daily.yml
+test -f soda/contracts/product_reporting_reaction_valence_daily.yml
+test -f soda/contracts/product_reporting_feed_interest_proxy_daily.yml
+test -f soda/contracts/product_reporting_contract_coverage.yml
+grep -q "analytics_mart/mart_product_reporting_content_performance_daily" soda/contracts/product_reporting_content_performance_daily.yml
+grep -q "analytics_mart/mart_product_reporting_feed_interest_proxy_daily" soda/contracts/product_reporting_feed_interest_proxy_daily.yml
+grep -q "Europe/Istanbul" soda/contracts/product_reporting_reaction_valence_daily.yml
+grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
+grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "soda contract verify" scripts/run_phase_d_smoke.sh
 grep -q "phase_d_local_smoke_job" dagster_project/definitions.py
 grep -q "note_body" dagster_project/definitions.py

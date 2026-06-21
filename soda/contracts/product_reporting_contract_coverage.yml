@@ -1,0 +1,44 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_contract_coverage
+
+checks:
+  - failed_rows:
+      name: Product reporting contract coverage is complete
+      qualifier: coverage_status_allowed
+      expression: |
+        coverage_status <> 'covered_in_phase2_bdv'
+        OR product_layer_contract_status <> 'product_reporting_phase3_pl'
+  - failed_rows:
+      name: Product reporting contract metadata is present
+      qualifier: contract_metadata_present
+      expression: |
+        metric_contract_id IS NULL
+        OR business_vault_model IS NULL
+        OR expected_grain IS NULL
+        OR source_completeness_label IS NULL
+        OR suppression_rule IS NULL
+        OR wording_status IS NULL
+  - failed_rows:
+      name: Product reporting source completeness and wording are allowed
+      qualifier: completeness_wording_allowed
+      expression: |
+        source_completeness_label NOT IN ('partial', 'complete')
+        OR wording_status NOT IN ('direct', 'proxy', 'explicit-signal-only', 'partial')
+
+columns:
+  - name: metric_contract_id
+    checks:
+      - missing:
+          name: Metric contract id is present
+      - duplicate:
+          name: Metric contract ids are unique
+      - invalid:
+          name: Metric contract id is expected
+          valid_values:
+            - "occupation_cohort_user_count_daily"
+            - "occupation_cohort_share_daily"
+            - "most_liked_content_daily"
+            - "content_performance_score_daily"
+            - "emoji_usage_count_daily"
+            - "reaction_valence_count_daily"
+            - "feed_interest_proxy_score_daily"
+            - "feed_interest_source_completeness_daily"

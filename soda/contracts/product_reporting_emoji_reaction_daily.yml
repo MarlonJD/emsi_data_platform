@@ -1,0 +1,38 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_emoji_reaction_daily
+
+checks:
+  - failed_rows:
+      name: Emoji usage counts are formula-safe
+      qualifier: emoji_usage_formula
+      expression: |
+        reaction_added_count < 0
+        OR reaction_removed_count < 0
+        OR emoji_usage_count <> reaction_added_count - reaction_removed_count
+  - failed_rows:
+      name: Emoji usage source completeness is labeled
+      qualifier: source_completeness_label_allowed
+      expression: |
+        source_completeness_label IS NULL
+        OR source_completeness_label NOT IN ('partial', 'complete')
+  - failed_rows:
+      name: Emoji usage wording and timezone are contract-safe
+      qualifier: wording_timezone_contract_safe
+      expression: |
+        wording_status <> 'direct'
+        OR reporting_timezone <> 'Europe/Istanbul'
+        OR metric_contract_id <> 'emoji_usage_count_daily'
+        OR refreshed_at IS NULL
+
+columns:
+  - name: reporting_date
+    checks:
+      - missing:
+          name: Reporting date is present
+  - name: emoji_key
+    checks:
+      - missing:
+          name: Emoji key is present
+  - name: occupation_cohort_key
+    checks:
+      - missing:
+          name: Occupation cohort key is present

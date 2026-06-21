@@ -14,6 +14,21 @@ SODA_CONFIG_PATH = Path(os.getenv("SODA_CONFIG_PATH", WORKSPACE_DIR / "soda" / "
 SODA_CONTRACT_PATH = Path(
     os.getenv("SODA_CONTRACT_PATH", WORKSPACE_DIR / "soda" / "contracts" / "raw_event_landing.yml")
 )
+PRODUCT_REPORTING_SODA_CONTRACT_DIR = Path(
+    os.getenv("PRODUCT_REPORTING_SODA_CONTRACT_DIR", WORKSPACE_DIR / "soda" / "contracts")
+)
+PRODUCT_REPORTING_SODA_CONTRACT_NAMES = (
+    "product_reporting_occupation_cohort_daily.yml",
+    "product_reporting_content_performance_daily.yml",
+    "product_reporting_emoji_reaction_daily.yml",
+    "product_reporting_reaction_valence_daily.yml",
+    "product_reporting_feed_interest_proxy_daily.yml",
+    "product_reporting_contract_coverage.yml",
+)
+PRODUCT_REPORTING_SODA_CONTRACT_PATHS = tuple(
+    PRODUCT_REPORTING_SODA_CONTRACT_DIR / contract_name
+    for contract_name in PRODUCT_REPORTING_SODA_CONTRACT_NAMES
+)
 
 BLOCKED_IDENTIFIER_PATTERN = (
     r'("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|'
@@ -237,6 +252,13 @@ PRODUCT_REPORTING_PHASE5_ASSETS = {
         "freshness": "<= 24 hours",
         "checks": "raw_content_text_absent, raw_notes_absent, contact_reveal_values_absent, tokens_absent, exact_gps_absent",
         "dbt_test": "product_reporting_forbidden_output_columns_absent",
+    },
+    "quality.product_reporting_soda_mart_contracts": {
+        "group": "product_reporting_mart_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "soda_contracts_for_pl_marts_pass",
+        "soda_contracts": ",".join(PRODUCT_REPORTING_SODA_CONTRACT_NAMES),
     },
 }
 
@@ -478,6 +500,27 @@ def product_reporting_forbidden_output_columns_absent_contract(context) -> dict[
     return product_reporting_asset_contract(context, "quality.product_reporting_forbidden_output_columns_absent")
 
 
+@asset(
+    name="product_reporting_soda_mart_contracts",
+    key_prefix=["quality"],
+    group_name="product_reporting_mart_quality",
+)
+def product_reporting_soda_mart_contracts(context) -> dict[str, str]:
+    metadata = product_reporting_asset_contract(context, "quality.product_reporting_soda_mart_contracts")
+    verified_contracts = []
+    for contract_path in PRODUCT_REPORTING_SODA_CONTRACT_PATHS:
+        run_soda_contract(context, contract_path)
+        verified_contracts.append(contract_path.name)
+    output_metadata = {
+        **metadata,
+        "status": "passed",
+        "contract_count": str(len(verified_contracts)),
+        "verified_contracts": ",".join(verified_contracts),
+    }
+    context.add_output_metadata(output_metadata)
+    return output_metadata
+
+
 @asset(group_name="phase_d_local_smoke")
 def analytics_raw_event_landing_smoke(context) -> dict[str, int]:
     import psycopg2
@@ -561,6 +604,11 @@ def soda_raw_event_landing_scan(
     dbt_phase_d_smoke: dict[str, str],
 ) -> dict[str, str]:
     _ = dbt_phase_d_smoke
+    run_soda_contract(context, SODA_CONTRACT_PATH)
+    return {"status": "passed", "contract_path": str(SODA_CONTRACT_PATH)}
+
+
+def run_soda_contract(context: Any, contract_path: Path) -> None:
     run_command(
         context,
         [
@@ -570,10 +618,9 @@ def soda_raw_event_landing_scan(
             "--data-source",
             str(SODA_CONFIG_PATH),
             "--contract",
-            str(SODA_CONTRACT_PATH),
+            str(contract_path),
         ],
     )
-    return {"status": "passed", "contract_path": str(SODA_CONTRACT_PATH)}
 
 
 def run_command(context: Any, command: list[str]) -> None:
@@ -669,6 +716,7 @@ defs = Definitions(
         product_reporting_mart_contract_metadata_present_contract,
         product_reporting_mart_expected_contract_ids_present_contract,
         product_reporting_forbidden_output_columns_absent_contract,
+        product_reporting_soda_mart_contracts,
         analytics_raw_event_landing_smoke,
         dbt_phase_d_smoke,
         soda_raw_event_landing_scan,

@@ -54,6 +54,19 @@ docker compose --env-file versions.env --env-file .env --profile local run --rm 
 docker compose --env-file versions.env --env-file .env --profile local run --rm soda-runner soda contract verify --data-source /workspace/soda/configuration.yml --contract /workspace/soda/contracts/raw_event_landing.yml
 ```
 
+Product Reporting PL marts have focused Soda contracts under
+`soda/contracts/product_reporting_*.yml`. Run a single mart contract with the
+same runner, for example:
+
+```sh
+docker compose --env-file versions.env --env-file .env --profile local run --rm soda-runner soda contract verify --data-source /workspace/soda/configuration.yml --contract /workspace/soda/contracts/product_reporting_content_performance_daily.yml
+```
+
+Dagster exposes the same Product Reporting contract coverage through
+`product_reporting_phase5_quality_job` and the
+`quality/product_reporting_soda_mart_contracts` asset in the
+`product_reporting_mart_quality` group.
+
 Optional BI and observability profiles:
 
 ```sh
