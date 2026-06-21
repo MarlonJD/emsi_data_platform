@@ -9,13 +9,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 EXIT_BLOCKED = 2
 EXIT_FAILED = 3
 
 LANES = {"admin", "reveal", "note", "feedml", "clickhouse"}
+TARGET_CLASSES = {"production", "staging-production-equivalent", "internal-qa"}
 QUERY_EVENT_NAMES_BY_LANE = {
     "admin": {"admin_surface_viewed", "admin_action_visibility_viewed"},
     "reveal": {"admin_reveal_audit_recorded"},
@@ -134,15 +135,15 @@ PAYLOAD_KEYS = {
 }
 
 LOCAL_DSN_MARKERS = (
-    "localhost",
-    "127.0.0.1",
-    "::1",
     "host=postgres",
     "host=analytics-postgres",
     "sslmode=disable",
     "analytics_local_password",
     "postgres://emsi:emsi@",
 )
+LOCAL_HOST_VALUES = {"localhost", "127.0.0.1", "::1", "postgres", "analytics-postgres"}
+LOCAL_HOSTADDR_VALUES = {"localhost", "127.0.0.1", "::1"}
+APPROVED_SSH_TUNNEL_MODE = "ssh-approved-warehouse"
 PLACEHOLDER_MARKERS = ("example", "fixture", "placeholder", "dummy")
 SECRET_PLACEHOLDER_MARKERS = PLACEHOLDER_MARKERS + ("redacted",)
 TEMPLATE_SECRET_VALUES = {
@@ -287,7 +288,11 @@ def collect_evidence(preflight_only: bool) -> tuple[int, dict[str, Any]]:
 
     evidence.update(
         {
-            "classification": "required-analytics-external-capture",
+            "classification": (
+                "required-analytics-internal-qa-capture"
+                if cfg.target_class == "internal-qa"
+                else "required-analytics-external-capture"
+            ),
             "landing_count": len(landing_rows),
             "dlq_count": dlq_count,
             "accepted_event_names": dict(sorted(counts.items())),
@@ -325,9 +330,10 @@ def load_config(preflight_only: bool) -> tuple[RequiredAnalyticsConfig, list[str
         errors.append("EMSI_REQUIRED_ANALYTICS_TARGET_NAME must not be local/dev/test")
 
     target_class = env("EMSI_REQUIRED_ANALYTICS_TARGET_CLASS")
-    if target_class not in {"production", "staging-production-equivalent"}:
+    if target_class not in TARGET_CLASSES:
         errors.append(
-            "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS must be production or staging-production-equivalent"
+            "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS must be production, "
+            "staging-production-equivalent, or internal-qa"
         )
 
     lanes = parse_lanes(errors)
@@ -458,7 +464,7 @@ def base_evidence(
             "lanes": list(cfg.lanes),
             "expected_event_names": sorted(cfg.expected_event_names),
             "seeded_user_only": True,
-            "local_dev_evidence_allowed": False,
+            "local_dev_evidence_allowed": cfg.target_class == "internal-qa",
         },
         "approval_ids": list(cfg.approval_ids),
         "seeded_user_ref": cfg.seeded_user_ref or None,
@@ -766,11 +772,20 @@ def validate_warehouse_dsn(value: str, errors: list[str]) -> None:
         errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN is required")
         return
     lowered = value.lower()
-    for marker in LOCAL_DSN_MARKERS:
-        if marker in lowered:
-            errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not point at local/dev")
-            break
+    allow_internal_local = internal_qa_local_warehouse_allowed(errors)
+    if not allow_internal_local:
+        for marker in LOCAL_DSN_MARKERS:
+            if marker in lowered:
+                errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not point at local/dev")
+                break
     parsed = urlparse(value)
+    query = parse_qs(parsed.query)
+    hostname = parsed.hostname or ""
+    hostaddr = first_query_value(query, "hostaddr")
+    if hostname.lower() in LOCAL_HOST_VALUES and not allow_internal_local:
+        errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not point at local/dev")
+    if hostaddr.lower() in LOCAL_HOSTADDR_VALUES and not allow_internal_local:
+        validate_approved_ssh_tunnel(parsed, query, errors)
     dsn_parts = (parsed.hostname or "", parsed.username or "", parsed.password or "")
     if any(is_secret_placeholder_ref(part) for part in dsn_parts):
         errors.append(
@@ -778,8 +793,62 @@ def validate_warehouse_dsn(value: str, errors: list[str]) -> None:
         )
     if is_template_secret(parsed.password or ""):
         errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not use a template password")
-    if not any(sslmode in lowered for sslmode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")):
+    if not allow_internal_local and not any(
+        sslmode in lowered for sslmode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")
+    ):
         errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must require TLS via sslmode")
+
+
+def internal_qa_local_warehouse_allowed(errors: list[str]) -> bool:
+    if env("EMSI_REQUIRED_ANALYTICS_ALLOW_INTERNAL_QA_LOCAL_WAREHOUSE") != "true":
+        return False
+    if env("EMSI_REQUIRED_ANALYTICS_TARGET_CLASS") != "internal-qa":
+        errors.append(
+            "EMSI_REQUIRED_ANALYTICS_ALLOW_INTERNAL_QA_LOCAL_WAREHOUSE=true requires "
+            "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS=internal-qa"
+        )
+        return False
+    return True
+
+
+def validate_approved_ssh_tunnel(parsed: Any, query: dict[str, list[str]], errors: list[str]) -> None:
+    if env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE") != APPROVED_SSH_TUNNEL_MODE:
+        errors.append(
+            "local hostaddr requires EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE=ssh-approved-warehouse"
+        )
+        return
+
+    ssh_host = env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_SSH_HOST")
+    remote_host = env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST")
+    local_port = env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT")
+    validate_safe_ref("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_SSH_HOST", ssh_host, errors)
+    validate_safe_ref("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST", remote_host, errors)
+
+    if remote_host and parsed.hostname != remote_host:
+        errors.append(
+            "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST must match the DSN hostname"
+        )
+    if first_query_value(query, "sslmode") != "verify-full":
+        errors.append("SSH tunnel warehouse DSNs must use sslmode=verify-full")
+    if not local_port:
+        errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT is required")
+    elif not local_port.isdigit():
+        errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT must be numeric")
+    else:
+        try:
+            parsed_port = parsed.port
+        except ValueError:
+            errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN port must be numeric")
+            parsed_port = None
+        if parsed_port != int(local_port):
+            errors.append(
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT must match the DSN port"
+            )
+
+
+def first_query_value(query: dict[str, list[str]], key: str) -> str:
+    values = query.get(key, [])
+    return values[0] if values else ""
 
 
 def require_check_result(name: str, status: str, artifact: str, errors: list[str]) -> None:

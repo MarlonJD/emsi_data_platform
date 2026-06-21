@@ -185,6 +185,22 @@ another approved bundle passed with `--env-file <path>` /
 `EMSI_REQUIRED_ANALYTICS_*=value` assignments and does not execute shell code
 from the env file.
 
+For internal QA only, set
+`EMSI_REQUIRED_ANALYTICS_TARGET_CLASS=internal-qa` and
+`EMSI_REQUIRED_ANALYTICS_ALLOW_INTERNAL_QA_LOCAL_WAREHOUSE=true` before using a
+local QA warehouse DSN. This is useful for macOS/iOS device QA evidence, but it
+does not close production/staging-equivalent evidence gates.
+
+For an approved remote warehouse behind SSH, keep the DSN hostname as the real
+warehouse hostname and point `hostaddr` at the local tunnel, for example
+`postgres://analytics_reader:<password>@warehouse.example.internal:15432/analytics?hostaddr=127.0.0.1&sslmode=verify-full`.
+Set `EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE=ssh-approved-warehouse`,
+`EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_SSH_HOST`,
+`EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST`, and
+`EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT`, then run
+`./scripts/open_required_analytics_ssh_tunnel.sh` in a separate terminal before
+capture. The tunnel helper does not execute shell code from the env file.
+
 Required preflight inputs:
 
 | Environment variable | Purpose |

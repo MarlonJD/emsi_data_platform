@@ -58,6 +58,103 @@ class RequiredAnalyticsCaptureTest(unittest.TestCase):
             evidence["preflight"]["errors"],
         )
 
+    def test_preflight_rejects_local_hostaddr_without_approved_tunnel(self) -> None:
+        env = valid_preflight_env()
+        env["EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN"] = (
+            "postgres://analytics_reader:reader_password@warehouse.emsi-prod.net:15432/"
+            "analytics?hostaddr=127.0.0.1&sslmode=verify-full"
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "local hostaddr requires EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE=ssh-approved-warehouse",
+            evidence["preflight"]["errors"],
+        )
+
+    def test_preflight_allows_approved_ssh_tunnel_hostaddr(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics_reader:reader_password@warehouse.emsi-prod.net:15432/"
+                    "analytics?hostaddr=127.0.0.1&sslmode=verify-full"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE": "ssh-approved-warehouse",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_SSH_HOST": "emsi-prod-bastion",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST": "warehouse.emsi-prod.net",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT": "15432",
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(evidence["classification"], "preflight-ready")
+
+    def test_preflight_rejects_ssh_tunnel_without_verify_full(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics_reader:reader_password@warehouse.emsi-prod.net:15432/"
+                    "analytics?hostaddr=127.0.0.1&sslmode=require"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE": "ssh-approved-warehouse",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_SSH_HOST": "emsi-prod-bastion",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST": "warehouse.emsi-prod.net",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT": "15432",
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "SSH tunnel warehouse DSNs must use sslmode=verify-full",
+            evidence["preflight"]["errors"],
+        )
+
+    def test_preflight_rejects_internal_qa_local_warehouse_without_ack(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS": "internal-qa",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics:analytics_local_password@localhost:5438/"
+                    "analytics?sslmode=disable"
+                ),
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not point at local/dev",
+            evidence["preflight"]["errors"],
+        )
+
+    def test_preflight_allows_internal_qa_local_warehouse_with_ack(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS": "internal-qa",
+                "EMSI_REQUIRED_ANALYTICS_ALLOW_INTERNAL_QA_LOCAL_WAREHOUSE": "true",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics:analytics_local_password@localhost:5438/"
+                    "analytics?sslmode=disable"
+                ),
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(evidence["classification"], "preflight-ready")
+        self.assertTrue(evidence["scope"]["local_dev_evidence_allowed"])
+
     def test_preflight_passes_with_required_external_inputs(self) -> None:
         with patch.dict(os.environ, valid_preflight_env(), clear=True):
             exit_code, evidence = capture.collect_evidence(preflight_only=True)
