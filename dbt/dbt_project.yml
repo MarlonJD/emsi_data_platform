@@ -25,3 +25,6 @@ models:
     business_vault:
       +schema: business_vault
       +materialized: view
+    mart:
+      +schema: mart
+      +materialized: view

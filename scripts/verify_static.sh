@@ -47,6 +47,7 @@ grep -q "psycopg2-binary==2.9.12" pyproject.toml
 grep -q "psycopg2-binary==2.9.10" docker/superset/requirements-postgres-metadata.txt
 grep -q "ScalefreeCOM/datavault4dbt" dbt/packages.yml
 grep -q "business_vault:" dbt/dbt_project.yml
+grep -q "mart:" dbt/dbt_project.yml
 test -f dbt/models/staging/stg_analytics_events.sql
 grep -q "event_hk" dbt/models/staging/stg_analytics_events.sql
 test -f dbt/models/raw_vault/hub_analytics_event.sql
@@ -71,8 +72,15 @@ test -f dbt/models/business_vault/s_content_performance_daily.sql
 test -f dbt/models/business_vault/s_emoji_usage_daily.sql
 test -f dbt/models/business_vault/s_reaction_valence_daily.sql
 test -f dbt/models/business_vault/product_reporting_bdv_contract_coverage.sql
+test -f dbt/models/mart/mart_product_reporting_occupation_cohort_daily.sql
+test -f dbt/models/mart/mart_product_reporting_content_performance_daily.sql
+test -f dbt/models/mart/mart_product_reporting_emoji_reaction_daily.sql
+test -f dbt/models/mart/mart_product_reporting_reaction_valence_daily.sql
+test -f dbt/models/mart/mart_product_reporting_feed_interest_proxy_daily.sql
+test -f dbt/models/mart/mart_product_reporting_contract_coverage.sql
 grep -q "product_reporting_phase1" dbt/models/staging/stg_product_reporting_content_events.sql
 grep -q "product_reporting_phase2" dbt/models/business_vault/s_content_performance_daily.sql
+grep -q "product_reporting_phase3" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
 grep -q "source_completeness_input" dbt/models/staging/stg_product_reporting_feed_events.sql
 grep -q "occupation_cohort_key" dbt/models/staging/stg_product_reporting_content_events.sql
 grep -q "emoji_key" dbt/models/staging/stg_product_reporting_reactions.sql
@@ -81,15 +89,20 @@ grep -q "interest_proxy_valence" dbt/models/staging/stg_product_reporting_feed_e
 grep -q "product_reporting_stage_reconciliation" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_job" dagster_project/definitions.py
+grep -q "product_reporting_phase3_pl_job" dagster_project/definitions.py
 grep -q "product_reporting_business_vault" dagster_project/definitions.py
+grep -q "product_reporting_mart" dagster_project/definitions.py
 grep -q "small_cell_suppression_status" dbt/models/business_vault/s_occupation_cohort_daily.sql
 grep -q "metric_contract_ids" dbt/models/business_vault/s_content_performance_daily.sql
 grep -q "source_completeness_label" dbt/models/business_vault/br_feed_interest_proxy.sql
-if grep -R "tracking_token" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql dbt/models/business_vault/*.sql; then
+grep -q "where small_cell_suppression_status = 'reportable'" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
+grep -q "metric_contract_ids" dbt/models/mart/mart_product_reporting_feed_interest_proxy_daily.sql
+grep -q "reporting_timezone" dbt/models/mart/mart_product_reporting_reaction_valence_daily.sql
+if grep -R "tracking_token" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql dbt/models/business_vault/*.sql dbt/models/mart/*.sql; then
   echo "product reporting models must not expose or derive from tracking tokens" >&2
   exit 1
 fi
-if grep -R "raw_content\\|post_body\\|comment_body\\|reply_body\\|dm_content\\|transcript\\|screenshot\\|exact_gps\\|contact_value\\|reveal_value\\|request_body\\|response_body" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql dbt/models/business_vault/*.sql; then
+if grep -R "raw_content\\|post_body\\|comment_body\\|reply_body\\|dm_content\\|transcript\\|screenshot\\|exact_gps\\|contact_value\\|reveal_value\\|request_body\\|response_body" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql dbt/models/business_vault/*.sql dbt/models/mart/*.sql; then
   echo "product reporting models must not project blocked raw content/contact/location fields" >&2
   exit 1
 fi

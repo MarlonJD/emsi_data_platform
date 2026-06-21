@@ -156,9 +156,49 @@ PRODUCT_REPORTING_PHASE2_ASSETS = {
     },
 }
 
+PRODUCT_REPORTING_PHASE3_ASSETS = {
+    "mart.mart_product_reporting_occupation_cohort_daily": {
+        "group": "product_reporting_mart",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "suppressed_rows_absent, metric_contract_ids_present, reporting_timezone_present",
+    },
+    "mart.mart_product_reporting_content_performance_daily": {
+        "group": "product_reporting_mart",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "suppressed_rows_absent, no_raw_text_columns, most_liked_rank_score_present",
+    },
+    "mart.mart_product_reporting_emoji_reaction_daily": {
+        "group": "product_reporting_mart",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "suppressed_rows_absent, bounded_emoji_key, direct_wording_status",
+    },
+    "mart.mart_product_reporting_reaction_valence_daily": {
+        "group": "product_reporting_mart",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "suppressed_rows_absent, explicit_signal_wording, no_mood_claim",
+    },
+    "mart.mart_product_reporting_feed_interest_proxy_daily": {
+        "group": "product_reporting_mart",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "suppressed_rows_absent, proxy_wording_status, source_completeness_label_present",
+    },
+    "mart.mart_product_reporting_contract_coverage": {
+        "group": "product_reporting_mart_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "pl_metric_contracts_covered, wording_status_present, suppression_rule_present",
+    },
+}
+
 PRODUCT_REPORTING_ASSETS = {
     **PRODUCT_REPORTING_PHASE1_ASSETS,
     **PRODUCT_REPORTING_PHASE2_ASSETS,
+    **PRODUCT_REPORTING_PHASE3_ASSETS,
 }
 
 
@@ -282,6 +322,60 @@ def s_reaction_valence_daily_contract(context) -> dict[str, str]:
 )
 def product_reporting_bdv_contract_coverage_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "business_vault.product_reporting_bdv_contract_coverage")
+
+
+@asset(
+    name="mart_product_reporting_occupation_cohort_daily",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart",
+)
+def mart_product_reporting_occupation_cohort_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_occupation_cohort_daily")
+
+
+@asset(
+    name="mart_product_reporting_content_performance_daily",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart",
+)
+def mart_product_reporting_content_performance_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_content_performance_daily")
+
+
+@asset(
+    name="mart_product_reporting_emoji_reaction_daily",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart",
+)
+def mart_product_reporting_emoji_reaction_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_emoji_reaction_daily")
+
+
+@asset(
+    name="mart_product_reporting_reaction_valence_daily",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart",
+)
+def mart_product_reporting_reaction_valence_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_reaction_valence_daily")
+
+
+@asset(
+    name="mart_product_reporting_feed_interest_proxy_daily",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart",
+)
+def mart_product_reporting_feed_interest_proxy_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_feed_interest_proxy_daily")
+
+
+@asset(
+    name="mart_product_reporting_contract_coverage",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart_quality",
+)
+def mart_product_reporting_contract_coverage_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_contract_coverage")
 
 
 @asset(group_name="phase_d_local_smoke")
@@ -425,6 +519,11 @@ product_reporting_phase2_bdv_job = define_asset_job(
     ),
 )
 
+product_reporting_phase3_pl_job = define_asset_job(
+    name="product_reporting_phase3_pl_job",
+    selection=AssetSelection.groups("product_reporting_mart") | AssetSelection.groups("product_reporting_mart_quality"),
+)
+
 
 defs = Definitions(
     assets=[
@@ -449,9 +548,20 @@ defs = Definitions(
         s_emoji_usage_daily_contract,
         s_reaction_valence_daily_contract,
         product_reporting_bdv_contract_coverage_contract,
+        mart_product_reporting_occupation_cohort_daily_contract,
+        mart_product_reporting_content_performance_daily_contract,
+        mart_product_reporting_emoji_reaction_daily_contract,
+        mart_product_reporting_reaction_valence_daily_contract,
+        mart_product_reporting_feed_interest_proxy_daily_contract,
+        mart_product_reporting_contract_coverage_contract,
         analytics_raw_event_landing_smoke,
         dbt_phase_d_smoke,
         soda_raw_event_landing_scan,
     ],
-    jobs=[phase_d_local_smoke_job, product_reporting_phase1_stage_rdv_job, product_reporting_phase2_bdv_job],
+    jobs=[
+        phase_d_local_smoke_job,
+        product_reporting_phase1_stage_rdv_job,
+        product_reporting_phase2_bdv_job,
+        product_reporting_phase3_pl_job,
+    ],
 )
