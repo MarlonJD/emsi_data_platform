@@ -195,10 +195,56 @@ PRODUCT_REPORTING_PHASE3_ASSETS = {
     },
 }
 
+PRODUCT_REPORTING_PHASE5_ASSETS = {
+    "quality.product_reporting_stage_reconciliation_invariants": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "row_count_non_negative, distinct_events_not_above_rows, missing_business_keys_bounded",
+        "dbt_test": "product_reporting_stage_reconciliation_invariants",
+    },
+    "quality.product_reporting_bdv_formula_invariants": {
+        "group": "product_reporting_business_vault_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "emoji_usage_formula, reaction_valence_formula, occupation_share_bounds",
+        "dbt_test": "product_reporting_bdv_formula_invariants",
+    },
+    "quality.product_reporting_mart_no_duplicate_daily_keys": {
+        "group": "product_reporting_mart_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "one_row_per_declared_mart_grain",
+        "dbt_test": "product_reporting_mart_no_duplicate_daily_keys",
+    },
+    "quality.product_reporting_mart_contract_metadata_present": {
+        "group": "product_reporting_mart_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "source_completeness_label_present, metric_contract_ids_present, wording_status_present, reporting_timezone_present",
+        "dbt_test": "product_reporting_mart_contract_metadata_present",
+    },
+    "quality.product_reporting_mart_expected_contract_ids_present": {
+        "group": "product_reporting_mart_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "phase0_metric_contract_ids_covered, pl_contract_status_present",
+        "dbt_test": "product_reporting_mart_expected_contract_ids_present",
+    },
+    "quality.product_reporting_forbidden_output_columns_absent": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "raw_content_text_absent, raw_notes_absent, contact_reveal_values_absent, tokens_absent, exact_gps_absent",
+        "dbt_test": "product_reporting_forbidden_output_columns_absent",
+    },
+}
+
 PRODUCT_REPORTING_ASSETS = {
     **PRODUCT_REPORTING_PHASE1_ASSETS,
     **PRODUCT_REPORTING_PHASE2_ASSETS,
     **PRODUCT_REPORTING_PHASE3_ASSETS,
+    **PRODUCT_REPORTING_PHASE5_ASSETS,
 }
 
 
@@ -378,6 +424,60 @@ def mart_product_reporting_contract_coverage_contract(context) -> dict[str, str]
     return product_reporting_asset_contract(context, "mart.mart_product_reporting_contract_coverage")
 
 
+@asset(
+    name="product_reporting_stage_reconciliation_invariants",
+    key_prefix=["quality"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_stage_reconciliation_invariants_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_stage_reconciliation_invariants")
+
+
+@asset(
+    name="product_reporting_bdv_formula_invariants",
+    key_prefix=["quality"],
+    group_name="product_reporting_business_vault_quality",
+)
+def product_reporting_bdv_formula_invariants_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_bdv_formula_invariants")
+
+
+@asset(
+    name="product_reporting_mart_no_duplicate_daily_keys",
+    key_prefix=["quality"],
+    group_name="product_reporting_mart_quality",
+)
+def product_reporting_mart_no_duplicate_daily_keys_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_mart_no_duplicate_daily_keys")
+
+
+@asset(
+    name="product_reporting_mart_contract_metadata_present",
+    key_prefix=["quality"],
+    group_name="product_reporting_mart_quality",
+)
+def product_reporting_mart_contract_metadata_present_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_mart_contract_metadata_present")
+
+
+@asset(
+    name="product_reporting_mart_expected_contract_ids_present",
+    key_prefix=["quality"],
+    group_name="product_reporting_mart_quality",
+)
+def product_reporting_mart_expected_contract_ids_present_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_mart_expected_contract_ids_present")
+
+
+@asset(
+    name="product_reporting_forbidden_output_columns_absent",
+    key_prefix=["quality"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_forbidden_output_columns_absent_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_forbidden_output_columns_absent")
+
+
 @asset(group_name="phase_d_local_smoke")
 def analytics_raw_event_landing_smoke(context) -> dict[str, int]:
     import psycopg2
@@ -524,6 +624,15 @@ product_reporting_phase3_pl_job = define_asset_job(
     selection=AssetSelection.groups("product_reporting_mart") | AssetSelection.groups("product_reporting_mart_quality"),
 )
 
+product_reporting_phase5_quality_job = define_asset_job(
+    name="product_reporting_phase5_quality_job",
+    selection=(
+        AssetSelection.groups("product_reporting_quality")
+        | AssetSelection.groups("product_reporting_business_vault_quality")
+        | AssetSelection.groups("product_reporting_mart_quality")
+    ),
+)
+
 
 defs = Definitions(
     assets=[
@@ -554,6 +663,12 @@ defs = Definitions(
         mart_product_reporting_reaction_valence_daily_contract,
         mart_product_reporting_feed_interest_proxy_daily_contract,
         mart_product_reporting_contract_coverage_contract,
+        product_reporting_stage_reconciliation_invariants_contract,
+        product_reporting_bdv_formula_invariants_contract,
+        product_reporting_mart_no_duplicate_daily_keys_contract,
+        product_reporting_mart_contract_metadata_present_contract,
+        product_reporting_mart_expected_contract_ids_present_contract,
+        product_reporting_forbidden_output_columns_absent_contract,
         analytics_raw_event_landing_smoke,
         dbt_phase_d_smoke,
         soda_raw_event_landing_scan,
@@ -563,5 +678,6 @@ defs = Definitions(
         product_reporting_phase1_stage_rdv_job,
         product_reporting_phase2_bdv_job,
         product_reporting_phase3_pl_job,
+        product_reporting_phase5_quality_job,
     ],
 )
