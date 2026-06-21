@@ -201,6 +201,17 @@ Set `EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE=ssh-approved-warehouse`,
 `./scripts/open_required_analytics_ssh_tunnel.sh` in a separate terminal before
 capture. The tunnel helper does not execute shell code from the env file.
 
+For an owner-approved local staging-production-equivalent warehouse, use the
+explicit `owner-approved-local-warehouse` mode instead of pretending an SSH
+tunnel was opened. Keep a non-local approved hostname in the DSN, map that
+hostname to the local service through `/etc/hosts` when needed, set
+`hostaddr=127.0.0.1`, and set
+`EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST` plus
+`EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT` to match the DSN. This
+mode is rejected for `production` targets and should only be used when the owner
+has explicitly accepted the local warehouse as staging-production-equivalent
+evidence for the named source window.
+
 Required preflight inputs:
 
 | Environment variable | Purpose |

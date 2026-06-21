@@ -93,6 +93,85 @@ class RequiredAnalyticsCaptureTest(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(evidence["classification"], "preflight-ready")
 
+    def test_preflight_allows_owner_approved_local_staging_warehouse(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics:analytics_local_password@"
+                    "qa-required-analytics.internal:5438/analytics?"
+                    "hostaddr=127.0.0.1&sslmode=disable"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE": (
+                    "owner-approved-local-warehouse"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST": (
+                    "qa-required-analytics.internal"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT": "5438",
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(evidence["classification"], "preflight-ready")
+        self.assertEqual(evidence["target"]["class"], "staging-production-equivalent")
+
+    def test_owner_approved_local_warehouse_rejects_production_target(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS": "production",
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics:analytics_local_password@"
+                    "qa-required-analytics.internal:5438/analytics?"
+                    "hostaddr=127.0.0.1&sslmode=disable"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE": (
+                    "owner-approved-local-warehouse"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST": (
+                    "qa-required-analytics.internal"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT": "5438",
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "owner-approved local warehouse mode must not be used for production targets",
+            evidence["preflight"]["errors"],
+        )
+
+    def test_owner_approved_local_warehouse_requires_non_local_hostname(self) -> None:
+        env = valid_preflight_env()
+        env.update(
+            {
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN": (
+                    "postgres://analytics:analytics_local_password@localhost:5438/"
+                    "analytics?hostaddr=127.0.0.1&sslmode=disable"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE": (
+                    "owner-approved-local-warehouse"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST": (
+                    "qa-required-analytics.internal"
+                ),
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT": "5438",
+            }
+        )
+        with patch.dict(os.environ, env, clear=True):
+            exit_code, evidence = capture.collect_evidence(preflight_only=True)
+
+        self.assertEqual(exit_code, capture.EXIT_BLOCKED)
+        self.assertIn(
+            "owner-approved local warehouse DSN must keep a non-local approved hostname",
+            evidence["preflight"]["errors"],
+        )
+
     def test_preflight_rejects_ssh_tunnel_without_verify_full(self) -> None:
         env = valid_preflight_env()
         env.update(

@@ -144,6 +144,7 @@ LOCAL_DSN_MARKERS = (
 LOCAL_HOST_VALUES = {"localhost", "127.0.0.1", "::1", "postgres", "analytics-postgres"}
 LOCAL_HOSTADDR_VALUES = {"localhost", "127.0.0.1", "::1"}
 APPROVED_SSH_TUNNEL_MODE = "ssh-approved-warehouse"
+OWNER_APPROVED_LOCAL_WAREHOUSE_MODE = "owner-approved-local-warehouse"
 PLACEHOLDER_MARKERS = ("example", "fixture", "placeholder", "dummy")
 SECRET_PLACEHOLDER_MARKERS = PLACEHOLDER_MARKERS + ("redacted",)
 TEMPLATE_SECRET_VALUES = {
@@ -773,7 +774,9 @@ def validate_warehouse_dsn(value: str, errors: list[str]) -> None:
         return
     lowered = value.lower()
     allow_internal_local = internal_qa_local_warehouse_allowed(errors)
-    if not allow_internal_local:
+    allow_owner_local = owner_approved_local_warehouse_allowed(errors)
+    allow_local_warehouse = allow_internal_local or allow_owner_local
+    if not allow_local_warehouse:
         for marker in LOCAL_DSN_MARKERS:
             if marker in lowered:
                 errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not point at local/dev")
@@ -782,9 +785,11 @@ def validate_warehouse_dsn(value: str, errors: list[str]) -> None:
     query = parse_qs(parsed.query)
     hostname = parsed.hostname or ""
     hostaddr = first_query_value(query, "hostaddr")
-    if hostname.lower() in LOCAL_HOST_VALUES and not allow_internal_local:
+    if hostname.lower() in LOCAL_HOST_VALUES and not allow_local_warehouse:
         errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not point at local/dev")
-    if hostaddr.lower() in LOCAL_HOSTADDR_VALUES and not allow_internal_local:
+    if allow_owner_local:
+        validate_owner_approved_local_warehouse(parsed, query, errors)
+    elif hostaddr.lower() in LOCAL_HOSTADDR_VALUES and not allow_internal_local:
         validate_approved_ssh_tunnel(parsed, query, errors)
     dsn_parts = (parsed.hostname or "", parsed.username or "", parsed.password or "")
     if any(is_secret_placeholder_ref(part) for part in dsn_parts):
@@ -793,7 +798,7 @@ def validate_warehouse_dsn(value: str, errors: list[str]) -> None:
         )
     if is_template_secret(parsed.password or ""):
         errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must not use a template password")
-    if not allow_internal_local and not any(
+    if not allow_local_warehouse and not any(
         sslmode in lowered for sslmode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")
     ):
         errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN must require TLS via sslmode")
@@ -809,6 +814,59 @@ def internal_qa_local_warehouse_allowed(errors: list[str]) -> bool:
         )
         return False
     return True
+
+
+def owner_approved_local_warehouse_allowed(errors: list[str]) -> bool:
+    if env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_MODE") != OWNER_APPROVED_LOCAL_WAREHOUSE_MODE:
+        return False
+    target_class = env("EMSI_REQUIRED_ANALYTICS_TARGET_CLASS")
+    if target_class == "production":
+        errors.append(
+            "owner-approved local warehouse mode must not be used for production targets"
+        )
+        return False
+    if target_class != "staging-production-equivalent":
+        errors.append(
+            "owner-approved local warehouse mode requires "
+            "EMSI_REQUIRED_ANALYTICS_TARGET_CLASS=staging-production-equivalent"
+        )
+        return False
+    return True
+
+
+def validate_owner_approved_local_warehouse(
+    parsed: Any, query: dict[str, list[str]], errors: list[str]
+) -> None:
+    remote_host = env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST")
+    local_port = env("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT")
+    hostaddr = first_query_value(query, "hostaddr")
+    validate_safe_ref("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST", remote_host, errors)
+    if (parsed.hostname or "").lower() in LOCAL_HOST_VALUES:
+        errors.append(
+            "owner-approved local warehouse DSN must keep a non-local approved hostname"
+        )
+    if hostaddr.lower() not in LOCAL_HOSTADDR_VALUES:
+        errors.append(
+            "owner-approved local warehouse DSN must use hostaddr=127.0.0.1 or another local loopback value"
+        )
+    if remote_host and parsed.hostname != remote_host:
+        errors.append(
+            "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_REMOTE_HOST must match the DSN hostname"
+        )
+    if not local_port:
+        errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT is required")
+    elif not local_port.isdigit():
+        errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT must be numeric")
+    else:
+        try:
+            parsed_port = parsed.port
+        except ValueError:
+            errors.append("EMSI_REQUIRED_ANALYTICS_WAREHOUSE_DSN port must be numeric")
+            parsed_port = None
+        if parsed_port != int(local_port):
+            errors.append(
+                "EMSI_REQUIRED_ANALYTICS_WAREHOUSE_TUNNEL_LOCAL_PORT must match the DSN port"
+            )
 
 
 def validate_approved_ssh_tunnel(parsed: Any, query: dict[str, list[str]], errors: list[str]) -> None:
