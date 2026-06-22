@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 import sys
 import types
 import unittest
@@ -121,6 +122,51 @@ class WorkerValidationTest(unittest.TestCase):
             worker.validate_event(json.dumps(event).encode("utf-8"))
 
         self.assertEqual(err.exception.code, "unsupported_expansion_metadata_field")
+
+    def test_product_reporting_subject_keys_survive_validation(self) -> None:
+        content_event = valid_event(
+            "post_impression",
+            {
+                "post_id": 538503,
+                "channel_id": 24004,
+                "surface": "community_channel",
+                "measurement": "first_visible",
+            },
+        )
+        channel_event = valid_event(
+            "channel_session_started",
+            {
+                "channel_id": 24004,
+                "source": "community_channel",
+            },
+        )
+
+        validated_content = worker.validate_event(json.dumps(content_event).encode("utf-8"))
+        validated_channel = worker.validate_event(json.dumps(channel_event).encode("utf-8"))
+
+        self.assertEqual(validated_content.payload["post_id"], 538503)
+        self.assertEqual(validated_content.payload["channel_id"], 24004)
+        self.assertEqual(validated_channel.payload["channel_id"], 24004)
+
+    def test_product_reporting_payload_rejects_raw_sensitive_key(self) -> None:
+        event = valid_event(
+            "post_impression",
+            {
+                "post_id": 538503,
+                "channel_id": 24004,
+                "raw_content": "private body",
+            },
+        )
+
+        with self.assertRaises(worker.ValidationError) as err:
+            worker.validate_event(json.dumps(event).encode("utf-8"))
+
+        self.assertEqual(err.exception.code, "blocked_payload_identifier")
+
+    def test_landing_projection_remains_event_id_idempotent(self) -> None:
+        source = inspect.getsource(worker.record_landing)
+
+        self.assertIn("ON CONFLICT (event_id) DO NOTHING", source)
 
 
 def valid_event(event_name: str, payload: dict[str, object]) -> dict[str, object]:
