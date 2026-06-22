@@ -74,6 +74,11 @@ grep -q "expected_excluded_count" dbt/models/raw_vault/product_reporting_stage_r
 grep -q "unexplained_delta" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
 test -f dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
 grep -q "force_product_reporting_stage_reconciliation_negative_failure" dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
+test -f dbt/tests/product_reporting/product_reporting_rdv_hub_invariants.sql
+grep -q "duplicate_hash_key" dbt/tests/product_reporting/product_reporting_rdv_hub_invariants.sql
+grep -q "business_key_hash_drift" dbt/tests/product_reporting/product_reporting_rdv_hub_invariants.sql
+grep -q "hash_key_business_key_drift" dbt/tests/product_reporting/product_reporting_rdv_hub_invariants.sql
+grep -q "hub_reporting_content" dbt/tests/product_reporting/product_reporting_rdv_hub_invariants.sql
 test -f dbt/models/raw_vault/h_channel.sql
 test -f dbt/models/raw_vault/l_user_channel_session.sql
 test -f dbt/models/raw_vault/s_channel_session_raw.sql
@@ -140,6 +145,7 @@ grep -q "reaction_valence" dbt/models/staging/stg_product_reporting_reactions.sq
 grep -q "interest_proxy_valence" dbt/models/staging/stg_product_reporting_feed_events.sql
 grep -q "product_reporting_stage_reconciliation" dagster_project/definitions.py
 grep -q "product_reporting_stage_reconciliation_negative_fixture_guard" dagster_project/definitions.py
+grep -q "product_reporting_rdv_hub_invariants" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase3_pl_job" dagster_project/definitions.py

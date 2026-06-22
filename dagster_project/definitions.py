@@ -363,6 +363,13 @@ PRODUCT_REPORTING_PHASE5_ASSETS = {
         "checks": "safe_negative_fixture_detects_unexplained_delta, forced_failure_var_available",
         "dbt_test": "product_reporting_stage_reconciliation_negative_fixture_guard",
     },
+    "quality.product_reporting_rdv_hub_invariants": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "hub_hash_key_not_null, business_key_not_null, hub_hash_key_unique, business_key_hash_mapping_stable",
+        "dbt_test": "product_reporting_rdv_hub_invariants",
+    },
     "quality.product_reporting_bdv_formula_invariants": {
         "group": "product_reporting_business_vault_quality",
         "cadence": "nightly_quality_job",
@@ -873,6 +880,15 @@ def product_reporting_stage_reconciliation_negative_fixture_guard_contract(conte
 
 
 @asset(
+    name="product_reporting_rdv_hub_invariants",
+    key_prefix=["quality"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_rdv_hub_invariants_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_rdv_hub_invariants")
+
+
+@asset(
     name="product_reporting_bdv_formula_invariants",
     key_prefix=["quality"],
     group_name="product_reporting_business_vault_quality",
@@ -1339,6 +1355,7 @@ defs = Definitions(
         mart_product_reporting_contract_coverage_contract,
         product_reporting_stage_reconciliation_invariants_contract,
         product_reporting_stage_reconciliation_negative_fixture_guard_contract,
+        product_reporting_rdv_hub_invariants_contract,
         product_reporting_bdv_formula_invariants_contract,
         product_reporting_mart_no_duplicate_daily_keys_contract,
         product_reporting_mart_contract_metadata_present_contract,
