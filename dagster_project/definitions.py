@@ -152,7 +152,7 @@ PRODUCT_REPORTING_PHASE1_ASSETS = {
         "group": "product_reporting_quality",
         "cadence": "nightly_quality_job",
         "freshness": "<= 24 hours",
-        "checks": "source_to_stage_counts_present, missing_business_key_count_visible",
+        "checks": "source_to_stage_counts_present, partition_scoped_accounting, unexplained_delta_zero",
     },
     "raw_vault.h_channel": {
         "group": "product_reporting_raw_vault",
@@ -353,8 +353,15 @@ PRODUCT_REPORTING_PHASE5_ASSETS = {
         "group": "product_reporting_quality",
         "cadence": "nightly_quality_job",
         "freshness": "<= 24 hours",
-        "checks": "row_count_non_negative, distinct_events_not_above_rows, missing_business_keys_bounded",
+        "checks": "row_count_non_negative, distinct_events_not_above_rows, missing_business_keys_bounded, accepted_landing_to_stage_balances",
         "dbt_test": "product_reporting_stage_reconciliation_invariants",
+    },
+    "quality.product_reporting_stage_reconciliation_negative_fixture_guard": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "safe_negative_fixture_detects_unexplained_delta, forced_failure_var_available",
+        "dbt_test": "product_reporting_stage_reconciliation_negative_fixture_guard",
     },
     "quality.product_reporting_bdv_formula_invariants": {
         "group": "product_reporting_business_vault_quality",
@@ -854,6 +861,18 @@ def product_reporting_stage_reconciliation_invariants_contract(context) -> dict[
 
 
 @asset(
+    name="product_reporting_stage_reconciliation_negative_fixture_guard",
+    key_prefix=["quality"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_stage_reconciliation_negative_fixture_guard_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(
+        context,
+        "quality.product_reporting_stage_reconciliation_negative_fixture_guard",
+    )
+
+
+@asset(
     name="product_reporting_bdv_formula_invariants",
     key_prefix=["quality"],
     group_name="product_reporting_business_vault_quality",
@@ -1319,6 +1338,7 @@ defs = Definitions(
         mart_product_reporting_together_coordination_daily_contract,
         mart_product_reporting_contract_coverage_contract,
         product_reporting_stage_reconciliation_invariants_contract,
+        product_reporting_stage_reconciliation_negative_fixture_guard_contract,
         product_reporting_bdv_formula_invariants_contract,
         product_reporting_mart_no_duplicate_daily_keys_contract,
         product_reporting_mart_contract_metadata_present_contract,

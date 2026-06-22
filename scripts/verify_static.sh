@@ -69,6 +69,11 @@ test -f dbt/models/raw_vault/sat_reporting_content_event.sql
 test -f dbt/models/raw_vault/sat_reporting_reaction_event.sql
 test -f dbt/models/raw_vault/sat_reporting_feed_serving_event.sql
 test -f dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+grep -q "accepted_source_count" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+grep -q "expected_excluded_count" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+grep -q "unexplained_delta" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+test -f dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
+grep -q "force_product_reporting_stage_reconciliation_negative_failure" dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
 test -f dbt/models/raw_vault/h_channel.sql
 test -f dbt/models/raw_vault/l_user_channel_session.sql
 test -f dbt/models/raw_vault/s_channel_session_raw.sql
@@ -134,6 +139,7 @@ grep -q "emoji_key" dbt/models/staging/stg_product_reporting_reactions.sql
 grep -q "reaction_valence" dbt/models/staging/stg_product_reporting_reactions.sql
 grep -q "interest_proxy_valence" dbt/models/staging/stg_product_reporting_feed_events.sql
 grep -q "product_reporting_stage_reconciliation" dagster_project/definitions.py
+grep -q "product_reporting_stage_reconciliation_negative_fixture_guard" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase3_pl_job" dagster_project/definitions.py
