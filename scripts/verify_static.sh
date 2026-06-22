@@ -155,6 +155,8 @@ grep -q "channel_session_started" dbt/models/staging/stg_product_reporting_chann
 grep -q "event_card_impression" dbt/models/staging/stg_product_reporting_event_funnel.sql
 grep -q "together_%" dbt/models/staging/stg_app_together_items.sql
 grep -q "product_reporting_phase2" dbt/models/business_vault/s_content_performance_daily.sql
+grep -q "restatement_state" dbt/models/business_vault/pit_reporting_content_daily.sql
+grep -q "deleted_or_opted_out_subject_count" dbt/models/business_vault/pit_reporting_content_daily.sql
 grep -q "product_reporting_phase3" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
 grep -q "product_reporting_privacy_contract" dbt/models/staging/stg_analytics_voice_session_summary.sql
 grep -q "voice_speaker_activity_legal_mode" dbt/models/staging/stg_analytics_voice_session_summary.sql
@@ -169,6 +171,7 @@ grep -q "product_reporting_stage_reconciliation_negative_fixture_guard" dagster_
 grep -q "product_reporting_rdv_hub_invariants" dagster_project/definitions.py
 grep -q "product_reporting_rdv_link_invariants" dagster_project/definitions.py
 grep -q "product_reporting_rdv_satellite_invariants" dagster_project/definitions.py
+grep -q "product_reporting_pit_content_daily_invariants" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase3_pl_job" dagster_project/definitions.py
