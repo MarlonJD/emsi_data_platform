@@ -356,6 +356,12 @@ PRODUCT_REPORTING_PHASE3_ASSETS = {
 }
 
 PRODUCT_REPORTING_PHASE5_ASSETS = {
+    "raw_vault.product_reporting_partition_trust_state": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "asset_freshness_status, partition_completeness_status, complete_through, combined_trust_status",
+    },
     "quality.product_reporting_stage_reconciliation_invariants": {
         "group": "product_reporting_quality",
         "cadence": "nightly_quality_job",
@@ -397,6 +403,13 @@ PRODUCT_REPORTING_PHASE5_ASSETS = {
         "freshness": "<= 24 hours",
         "checks": "pit_daily_grain_unique, selected_satellite_not_after_as_of, late_arrival_restatement_state, deleted_or_opted_out_subjects_absent",
         "dbt_test": "product_reporting_pit_content_daily_invariants",
+    },
+    "quality.product_reporting_partition_trust_state_invariants": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "freshness_does_not_hide_missing_partitions, stale_complete_partitions_fail, expected_empty_and_late_open_classified",
+        "dbt_test": "product_reporting_partition_trust_state_invariants",
     },
     "quality.product_reporting_bdv_formula_invariants": {
         "group": "product_reporting_business_vault_quality",
@@ -941,6 +954,24 @@ def product_reporting_rdv_satellite_invariants_contract(context) -> dict[str, st
 )
 def product_reporting_pit_content_daily_invariants_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "quality.product_reporting_pit_content_daily_invariants")
+
+
+@asset(
+    name="product_reporting_partition_trust_state",
+    key_prefix=["raw_vault"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_partition_trust_state_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.product_reporting_partition_trust_state")
+
+
+@asset(
+    name="product_reporting_partition_trust_state_invariants",
+    key_prefix=["quality"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_partition_trust_state_invariants_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_partition_trust_state_invariants")
 
 
 @asset(
@@ -1557,8 +1588,10 @@ defs = Definitions(
         mart_product_reporting_feed_interest_proxy_daily_contract,
         mart_product_reporting_together_coordination_daily_contract,
         mart_product_reporting_contract_coverage_contract,
+        product_reporting_partition_trust_state_contract,
         product_reporting_stage_reconciliation_invariants_contract,
         product_reporting_stage_reconciliation_negative_fixture_guard_contract,
+        product_reporting_partition_trust_state_invariants_contract,
         product_reporting_rdv_hub_invariants_contract,
         product_reporting_rdv_link_invariants_contract,
         product_reporting_rdv_satellite_invariants_contract,

@@ -69,9 +69,14 @@ test -f dbt/models/raw_vault/sat_reporting_content_event.sql
 test -f dbt/models/raw_vault/sat_reporting_reaction_event.sql
 test -f dbt/models/raw_vault/sat_reporting_feed_serving_event.sql
 test -f dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+test -f dbt/models/raw_vault/product_reporting_partition_trust_state.sql
 grep -q "accepted_source_count" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
 grep -q "expected_excluded_count" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
 grep -q "unexplained_delta" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+grep -q "freshness_status" dbt/models/raw_vault/product_reporting_partition_trust_state.sql
+grep -q "completeness_status" dbt/models/raw_vault/product_reporting_partition_trust_state.sql
+grep -q "trust_status" dbt/models/raw_vault/product_reporting_partition_trust_state.sql
+grep -q "complete_through" dbt/models/raw_vault/product_reporting_partition_trust_state.sql
 grep -q "force_product_reporting_landing_contradiction_failure" dbt/tests/product_reporting/product_reporting_stage_reconciliation_invariants.sql
 grep -q "event_id_raw_hash_contradiction" dbt/tests/product_reporting/product_reporting_stage_reconciliation_invariants.sql
 test -f dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
@@ -159,6 +164,11 @@ grep -q "together_%" dbt/models/staging/stg_app_together_items.sql
 grep -q "product_reporting_phase2" dbt/models/business_vault/s_content_performance_daily.sql
 grep -q "restatement_state" dbt/models/business_vault/pit_reporting_content_daily.sql
 grep -q "deleted_or_opted_out_subject_count" dbt/models/business_vault/pit_reporting_content_daily.sql
+test -f dbt/tests/product_reporting/product_reporting_partition_trust_state_invariants.sql
+grep -q "force_product_reporting_partition_trust_stale_failure" dbt/tests/product_reporting/product_reporting_partition_trust_state_invariants.sql
+grep -q "force_product_reporting_partition_trust_recent_incomplete_failure" dbt/tests/product_reporting/product_reporting_partition_trust_state_invariants.sql
+grep -q "force_product_reporting_partition_trust_missing_required_partition_failure" dbt/tests/product_reporting/product_reporting_partition_trust_state_invariants.sql
+grep -q "freshness_hidden_missing_or_partial_partition" dbt/tests/product_reporting/product_reporting_partition_trust_state_invariants.sql
 grep -q "product_reporting_phase3" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
 grep -q "product_reporting_privacy_contract" dbt/models/staging/stg_analytics_voice_session_summary.sql
 grep -q "voice_speaker_activity_legal_mode" dbt/models/staging/stg_analytics_voice_session_summary.sql
@@ -174,6 +184,8 @@ grep -q "product_reporting_rdv_hub_invariants" dagster_project/definitions.py
 grep -q "product_reporting_rdv_link_invariants" dagster_project/definitions.py
 grep -q "product_reporting_rdv_satellite_invariants" dagster_project/definitions.py
 grep -q "product_reporting_pit_content_daily_invariants" dagster_project/definitions.py
+grep -q "product_reporting_partition_trust_state" dagster_project/definitions.py
+grep -q "product_reporting_partition_trust_state_invariants" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase3_pl_job" dagster_project/definitions.py
