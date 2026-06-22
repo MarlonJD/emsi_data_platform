@@ -1,11 +1,12 @@
 {{ config(materialized="view", tags=["product_reporting_phase1", "data_vault"]) }}
 
-select distinct
+select
   md5(concat_ws('||', reaction_hk, content_hk)) as link_hk,
   reaction_hk,
   content_hk,
-  load_datetime,
-  record_source
+  min(load_datetime) as load_datetime,
+  min(record_source) as record_source
 from {{ ref("stg_product_reporting_reactions") }}
 where reaction_hk is not null
   and content_hk is not null
+group by reaction_hk, content_hk
