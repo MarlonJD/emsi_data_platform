@@ -5,7 +5,14 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from dagster import AssetSelection, Definitions, asset, define_asset_job
+from dagster import (
+    AssetSelection,
+    DefaultScheduleStatus,
+    Definitions,
+    ScheduleDefinition,
+    asset,
+    define_asset_job,
+)
 
 
 WORKSPACE_DIR = Path(os.getenv("DATA_PLATFORM_WORKSPACE", "/workspace"))
@@ -1351,6 +1358,48 @@ privacy_contract_guard_job = define_asset_job(
     ),
 )
 
+phase_d_local_smoke_daily_schedule = ScheduleDefinition(
+    name="phase_d_local_smoke_daily_schedule",
+    job=phase_d_local_smoke_job,
+    cron_schedule="15 6 * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "phase_d_local_smoke_daily"},
+    description=(
+        "Runs the local ingest, dbt, and Soda smoke once daily while the local "
+        "Dagster daemon is active."
+    ),
+)
+
+privacy_lifecycle_daily_schedule = ScheduleDefinition(
+    name="privacy_lifecycle_daily_schedule",
+    job=privacy_lifecycle_daily_job,
+    cron_schedule="30 6 * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "privacy_lifecycle_daily"},
+    description=(
+        "Runs the local source-bound privacy lifecycle checks once daily while "
+        "the local Dagster daemon is active."
+    ),
+)
+
+product_reporting_phase5_quality_daily_schedule = ScheduleDefinition(
+    name="product_reporting_phase5_quality_daily_schedule",
+    job=product_reporting_phase5_quality_job,
+    cron_schedule="45 6 * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={
+        "emsi.local_dev": "true",
+        "emsi.schedule": "product_reporting_phase5_quality_daily",
+    },
+    description=(
+        "Runs the Product Reporting quality contract lane once daily while the "
+        "local Dagster daemon is active."
+    ),
+)
+
 
 defs = Definitions(
     assets=[
@@ -1443,5 +1492,10 @@ defs = Definitions(
         product_reporting_phase5_quality_job,
         privacy_lifecycle_daily_job,
         privacy_contract_guard_job,
+    ],
+    schedules=[
+        phase_d_local_smoke_daily_schedule,
+        privacy_lifecycle_daily_schedule,
+        product_reporting_phase5_quality_daily_schedule,
     ],
 )

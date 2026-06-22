@@ -17,6 +17,17 @@ Core services:
 - `dbt-runner`: on-demand dbt container.
 - `soda-runner`: on-demand self-hosted Soda v4 container.
 
+The local Dagster schedules are enabled by default while `dagster-daemon` is
+running, so Dagster records schedule ticks and runs in the UI at
+`http://localhost:3000`:
+
+- `phase_d_local_smoke_daily_schedule` runs `phase_d_local_smoke_job` at 06:15
+  Europe/Istanbul.
+- `privacy_lifecycle_daily_schedule` runs `privacy_lifecycle_daily_job` at 06:30
+  Europe/Istanbul.
+- `product_reporting_phase5_quality_daily_schedule` runs
+  `product_reporting_phase5_quality_job` at 06:45 Europe/Istanbul.
+
 ## Event Streaming Profile
 
 ```sh

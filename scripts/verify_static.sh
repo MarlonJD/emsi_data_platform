@@ -260,6 +260,11 @@ grep -q "product_reporting_together_coordination_daily.yml" dagster_project/defi
 grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "privacy_lifecycle_daily_job" dagster_project/definitions.py
 grep -q "privacy_contract_guard_job" dagster_project/definitions.py
+grep -q "DefaultScheduleStatus.RUNNING" dagster_project/definitions.py
+grep -q "phase_d_local_smoke_daily_schedule" dagster_project/definitions.py
+grep -q "privacy_lifecycle_daily_schedule" dagster_project/definitions.py
+grep -q "product_reporting_phase5_quality_daily_schedule" dagster_project/definitions.py
+grep -q "Europe/Istanbul" dagster_project/definitions.py
 grep -q "voice_usage_soda_contracts" dagster_project/definitions.py
 grep -q "personal_recap_deletion_checks" dagster_project/definitions.py
 grep -q "soda contract verify" scripts/run_phase_d_smoke.sh

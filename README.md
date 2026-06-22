@@ -68,6 +68,18 @@ Dagster exposes the same Product Reporting contract coverage through
 `quality/product_reporting_soda_mart_contracts` asset in the
 `product_reporting_mart_quality` group.
 
+When the local Dagster daemon is running, the local schedules are enabled by
+default and create Airflow-style historical ticks and runs in the Dagster UI:
+
+- `phase_d_local_smoke_daily_schedule`: `phase_d_local_smoke_job` at 06:15
+  Europe/Istanbul.
+- `privacy_lifecycle_daily_schedule`: `privacy_lifecycle_daily_job` at 06:30
+  Europe/Istanbul.
+- `product_reporting_phase5_quality_daily_schedule`:
+  `product_reporting_phase5_quality_job` at 06:45 Europe/Istanbul.
+
+The Dagster UI is available at `http://localhost:3000` in the local profile.
+
 Run the local/source-bound privacy lifecycle runtime check with the default
 bounded packet, or point it at another approved local packet:
 
