@@ -71,6 +71,12 @@ Baseline topics:
 Local host clients can use `localhost:19092`. Compose-network clients should
 use `redpanda:9092`.
 
+On Apple Silicon/OrbStack local runs, `REDPANDA_PLATFORM` defaults to
+`linux/amd64` for the Redpanda services because the pinned local-dev candidate
+image is not available as `linux/arm64`. This is a local Compose compatibility
+setting; Kubernetes deployments should use compatible nodes or an approved
+multi-arch Kafka-compatible broker image.
+
 Run the deterministic ingest smoke:
 
 ```sh
@@ -174,6 +180,10 @@ The backend target uses this Compose project network
 `analytics-ingest-worker` on the data-platform side. The Dagster UI is available
 at `http://localhost:3000` after the target is healthy. Superset, Grafana,
 Evidence.dev, SeaweedFS, and ClickHouse stay opt-in.
+Use `make docker-data-platform-reset` from `backend/go-api` when switching from
+normal Go API Compose mode or when OrbStack shows duplicate `go-api` groups; the
+reset removes containers and orphans without deleting volumes, then recreates
+the core API/data-platform shape.
 
 This is local-dev integration evidence only. The Go API still writes accepted
 analytics events to its legacy `analytics.events` table while it also publishes

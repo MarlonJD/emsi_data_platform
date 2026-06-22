@@ -133,6 +133,8 @@ Kafka remains a rollback/certification lane. Runtime services should publish
 events to the stream boundary; data-platform consumers land accepted events into
 analytics Postgres. Application services must not write directly into the
 warehouse.
+On Apple Silicon/OrbStack, the pinned Redpanda candidate defaults to
+`REDPANDA_PLATFORM=linux/amd64` for local Compose compatibility.
 
 Run the local ingest smoke after the streaming profile is available:
 

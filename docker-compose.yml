@@ -156,6 +156,7 @@ services:
 
   redpanda:
     image: ${REDPANDA_IMAGE:-redpandadata/redpanda:v26.1.10}
+    platform: ${REDPANDA_PLATFORM:-linux/amd64}
     profiles: ["streaming"]
     command:
       - redpanda
@@ -201,6 +202,7 @@ services:
 
   redpanda-topic-init:
     image: ${REDPANDA_IMAGE:-redpandadata/redpanda:v26.1.10}
+    platform: ${REDPANDA_PLATFORM:-linux/amd64}
     profiles: ["streaming"]
     depends_on:
       redpanda:
