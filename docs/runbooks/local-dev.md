@@ -196,12 +196,11 @@ analytics until measured need and production gates exist.
 
 The first EMSI app-originated event smoke is local-dev only. Native clients do
 not write directly to Kafka, Redpanda, ClickHouse, or analytics PostgreSQL; they
-use Go API GraphQL mutations or documented REST compatibility routes:
+use Go API GraphQL mutations or documented HTTP transport exceptions:
 
-- Feed ML Home feed telemetry: GraphQL `recordFeedEvents`, compatibility
-  `POST /v2/feed/events`.
+- Feed ML Home feed telemetry: GraphQL `recordFeedEvents`.
 - Auth/session/screen and bounded Admin usage analytics: GraphQL
-  `recordAppEvents`, compatibility `POST /v1/analytics/events`.
+  `recordAppEvents`.
 
 Expected local path:
 
