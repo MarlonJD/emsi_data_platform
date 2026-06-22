@@ -1400,6 +1400,113 @@ product_reporting_phase5_quality_daily_schedule = ScheduleDefinition(
     ),
 )
 
+product_reporting_phase1_stage_rdv_quarter_hourly_schedule = ScheduleDefinition(
+    name="product_reporting_phase1_stage_rdv_quarter_hourly_schedule",
+    job=product_reporting_phase1_stage_rdv_job,
+    cron_schedule="*/15 * * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={
+        "emsi.local_dev": "true",
+        "emsi.schedule": "product_reporting_phase1_stage_rdv_quarter_hourly",
+    },
+    description=(
+        "Runs the Product Reporting Stage/RDV contract lane every 15 minutes "
+        "while the local Dagster daemon is active."
+    ),
+)
+
+product_reporting_phase2_bdv_hourly_schedule = ScheduleDefinition(
+    name="product_reporting_phase2_bdv_hourly_schedule",
+    job=product_reporting_phase2_bdv_job,
+    cron_schedule="5 * * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "product_reporting_phase2_bdv_hourly"},
+    description=(
+        "Runs the Product Reporting Business Vault contract lane hourly while "
+        "the local Dagster daemon is active."
+    ),
+)
+
+privacy_contract_guard_hourly_schedule = ScheduleDefinition(
+    name="privacy_contract_guard_hourly_schedule",
+    job=privacy_contract_guard_job,
+    cron_schedule="10 * * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "privacy_contract_guard_hourly"},
+    description=(
+        "Runs the privacy and voice contract guard hourly while the local "
+        "Dagster daemon is active."
+    ),
+)
+
+product_reporting_phase3_pl_daily_schedule = ScheduleDefinition(
+    name="product_reporting_phase3_pl_daily_schedule",
+    job=product_reporting_phase3_pl_job,
+    cron_schedule="35 6 * * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "product_reporting_phase3_pl_daily"},
+    description=(
+        "Runs the Product Reporting PL mart contract lane once daily while the "
+        "local Dagster daemon is active."
+    ),
+)
+
+phase_d_local_smoke_weekly_schedule = ScheduleDefinition(
+    name="phase_d_local_smoke_weekly_schedule",
+    job=phase_d_local_smoke_job,
+    cron_schedule="0 7 * * 1",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "phase_d_local_smoke_weekly"},
+    description=(
+        "Runs the local ingest, dbt, and Soda smoke weekly while the local "
+        "Dagster daemon is active."
+    ),
+)
+
+product_reporting_phase5_quality_weekly_schedule = ScheduleDefinition(
+    name="product_reporting_phase5_quality_weekly_schedule",
+    job=product_reporting_phase5_quality_job,
+    cron_schedule="15 7 * * 1",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "product_reporting_phase5_quality_weekly"},
+    description=(
+        "Runs the Product Reporting quality contract lane weekly while the "
+        "local Dagster daemon is active."
+    ),
+)
+
+product_reporting_phase5_quality_monthly_schedule = ScheduleDefinition(
+    name="product_reporting_phase5_quality_monthly_schedule",
+    job=product_reporting_phase5_quality_job,
+    cron_schedule="0 8 1 * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "product_reporting_phase5_quality_monthly"},
+    description=(
+        "Runs the Product Reporting quality contract lane monthly while the "
+        "local Dagster daemon is active."
+    ),
+)
+
+privacy_lifecycle_monthly_schedule = ScheduleDefinition(
+    name="privacy_lifecycle_monthly_schedule",
+    job=privacy_lifecycle_daily_job,
+    cron_schedule="30 8 1 * *",
+    execution_timezone="Europe/Istanbul",
+    default_status=DefaultScheduleStatus.RUNNING,
+    tags={"emsi.local_dev": "true", "emsi.schedule": "privacy_lifecycle_monthly"},
+    description=(
+        "Runs the source-bound privacy lifecycle checks monthly while the local "
+        "Dagster daemon is active."
+    ),
+)
+
 
 defs = Definitions(
     assets=[
@@ -1494,8 +1601,16 @@ defs = Definitions(
         privacy_contract_guard_job,
     ],
     schedules=[
+        product_reporting_phase1_stage_rdv_quarter_hourly_schedule,
+        product_reporting_phase2_bdv_hourly_schedule,
+        privacy_contract_guard_hourly_schedule,
         phase_d_local_smoke_daily_schedule,
+        product_reporting_phase3_pl_daily_schedule,
         privacy_lifecycle_daily_schedule,
         product_reporting_phase5_quality_daily_schedule,
+        phase_d_local_smoke_weekly_schedule,
+        product_reporting_phase5_quality_weekly_schedule,
+        product_reporting_phase5_quality_monthly_schedule,
+        privacy_lifecycle_monthly_schedule,
     ],
 )

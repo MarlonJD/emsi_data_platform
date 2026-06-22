@@ -262,9 +262,18 @@ grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "privacy_lifecycle_daily_job" dagster_project/definitions.py
 grep -q "privacy_contract_guard_job" dagster_project/definitions.py
 grep -q "DefaultScheduleStatus.RUNNING" dagster_project/definitions.py
+grep -q "product_reporting_phase1_stage_rdv_quarter_hourly_schedule" dagster_project/definitions.py
+grep -q "product_reporting_phase2_bdv_hourly_schedule" dagster_project/definitions.py
+grep -q "privacy_contract_guard_hourly_schedule" dagster_project/definitions.py
 grep -q "phase_d_local_smoke_daily_schedule" dagster_project/definitions.py
+grep -q "product_reporting_phase3_pl_daily_schedule" dagster_project/definitions.py
 grep -q "privacy_lifecycle_daily_schedule" dagster_project/definitions.py
 grep -q "product_reporting_phase5_quality_daily_schedule" dagster_project/definitions.py
+grep -q "phase_d_local_smoke_weekly_schedule" dagster_project/definitions.py
+grep -q "product_reporting_phase5_quality_weekly_schedule" dagster_project/definitions.py
+grep -q "product_reporting_phase5_quality_monthly_schedule" dagster_project/definitions.py
+grep -q "privacy_lifecycle_monthly_schedule" dagster_project/definitions.py
+grep -q "\\*/15 \\* \\* \\* \\*" dagster_project/definitions.py
 grep -q "Europe/Istanbul" dagster_project/definitions.py
 grep -q "voice_usage_soda_contracts" dagster_project/definitions.py
 grep -q "personal_recap_deletion_checks" dagster_project/definitions.py

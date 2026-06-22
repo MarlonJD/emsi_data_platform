@@ -71,12 +71,19 @@ Dagster exposes the same Product Reporting contract coverage through
 When the local Dagster daemon is running, the local schedules are enabled by
 default and create Airflow-style historical ticks and runs in the Dagster UI:
 
-- `phase_d_local_smoke_daily_schedule`: `phase_d_local_smoke_job` at 06:15
-  Europe/Istanbul.
-- `privacy_lifecycle_daily_schedule`: `privacy_lifecycle_daily_job` at 06:30
-  Europe/Istanbul.
-- `product_reporting_phase5_quality_daily_schedule`:
-  `product_reporting_phase5_quality_job` at 06:45 Europe/Istanbul.
+| Cadence | Schedule | Job |
+| --- | --- | --- |
+| Every 15 minutes | `product_reporting_phase1_stage_rdv_quarter_hourly_schedule` | `product_reporting_phase1_stage_rdv_job` |
+| Hourly | `product_reporting_phase2_bdv_hourly_schedule` | `product_reporting_phase2_bdv_job` |
+| Hourly | `privacy_contract_guard_hourly_schedule` | `privacy_contract_guard_job` |
+| Daily 06:15 Europe/Istanbul | `phase_d_local_smoke_daily_schedule` | `phase_d_local_smoke_job` |
+| Daily 06:30 Europe/Istanbul | `privacy_lifecycle_daily_schedule` | `privacy_lifecycle_daily_job` |
+| Daily 06:35 Europe/Istanbul | `product_reporting_phase3_pl_daily_schedule` | `product_reporting_phase3_pl_job` |
+| Daily 06:45 Europe/Istanbul | `product_reporting_phase5_quality_daily_schedule` | `product_reporting_phase5_quality_job` |
+| Weekly Monday 07:00 Europe/Istanbul | `phase_d_local_smoke_weekly_schedule` | `phase_d_local_smoke_job` |
+| Weekly Monday 07:15 Europe/Istanbul | `product_reporting_phase5_quality_weekly_schedule` | `product_reporting_phase5_quality_job` |
+| Monthly day 1 08:00 Europe/Istanbul | `product_reporting_phase5_quality_monthly_schedule` | `product_reporting_phase5_quality_job` |
+| Monthly day 1 08:30 Europe/Istanbul | `privacy_lifecycle_monthly_schedule` | `privacy_lifecycle_daily_job` |
 
 The Dagster UI is available at `http://localhost:3000` in the local profile.
 For manual local launches that should show up under the Dagster code location
