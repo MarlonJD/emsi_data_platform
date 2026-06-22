@@ -67,6 +67,22 @@ Dagster exposes the same Product Reporting contract coverage through
 `quality/product_reporting_soda_mart_contracts` asset in the
 `product_reporting_mart_quality` group.
 
+Run the local/source-bound privacy lifecycle runtime check with the default
+bounded packet, or point it at another approved local packet:
+
+```sh
+./scripts/run_privacy_lifecycle_runtime.sh
+PRIVACY_LIFECYCLE_SOURCE_PACKET_PATH=/path/to/source-bound-packet.json ./scripts/run_privacy_lifecycle_runtime.sh
+```
+
+The check validates a source-bound packet, materializes the same semantics
+through the Dagster `privacy_lifecycle_daily_job` asset
+`privacy/source_bound_runtime_report`, and keeps production collection, API
+exposure, dashboard exposure, and ClickHouse promotion disabled. It accepts only
+bounded source references, hash references, owner approval refs, retention
+counts, and lifecycle decisions; it does not read `emsi_qa`, `emsi_qqq`, raw
+PII, or production warehouse data.
+
 Optional BI and observability profiles:
 
 ```sh

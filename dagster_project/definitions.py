@@ -38,6 +38,9 @@ PRIVACY_SODA_CONTRACT_PATHS = tuple(
     PRODUCT_REPORTING_SODA_CONTRACT_DIR / contract_name
     for contract_name in PRIVACY_SODA_CONTRACT_NAMES
 )
+PRIVACY_LIFECYCLE_DEFAULT_SOURCE_PACKET_PATH = (
+    WORKSPACE_DIR / "ingest_worker" / "fixtures" / "privacy_lifecycle_source_bound_packet.json"
+)
 
 BLOCKED_IDENTIFIER_PATTERN = (
     r'("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|'
@@ -289,63 +292,71 @@ PRIVACY_LIFECYCLE_ASSETS = {
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "retention_policy_ids_present, approval_id_present, anonymize_or_delete_named",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.retention_candidates_daily": {
         "group": "privacy_retention",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "expired_partitions_identified, personal_state_classified, source_window_declared",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.anonymous_candidate_build": {
         "group": "privacy_anonymization",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "identifier_free_candidate, allowed_dimensions_only, method_version_present",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.anonymization_checks": {
         "group": "privacy_quality",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "n_thresholds, complementary_suppression, reidentification_risk_check, evidence_id_present",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.anonymous_aggregate_publish": {
         "group": "privacy_anonymization",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "publish_only_after_passed_checks, anonymous_zone_no_stable_identifier",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.expired_personal_candidates": {
         "group": "privacy_deletion",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "expired_personal_rows_enumerated, delete_scope_partition_scoped",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.personal_data_purge": {
         "group": "privacy_deletion",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "purge_runs_even_when_anonymization_fails, late_event_resurrection_blocked",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.downstream_cleanup_checks": {
         "group": "privacy_quality",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "analytics_optout_cleanup, recap_optout_cleanup, account_deletion_cleanup, feed_profile_reset_cleanup",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
     },
     "privacy.lifecycle_audit": {
         "group": "privacy_audit",
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "minimum_three_year_audit, incident_record_on_anonymization_failure, evidence_id_present",
-        "status": "contract_scaffold_only",
+        "status": "local_source_bound_runtime_ready",
+    },
+    "privacy.source_bound_runtime_report": {
+        "group": "privacy_quality",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "source_bound_packet_valid, local_runtime_report_passed, production_api_dashboard_clickhouse_disabled",
+        "status": "local_source_bound_runtime_ready",
+        "source_packet": "ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json",
     },
 }
 
@@ -426,6 +437,12 @@ def product_reporting_asset_contract(context: Any, asset_key: str) -> dict[str, 
 def privacy_analytics_asset_contract(context: Any, asset_key: str) -> dict[str, str]:
     contract = PRIVACY_ANALYTICS_CONTRACT_ASSETS[asset_key]
     metadata = {"asset_key": asset_key, **contract}
+    if asset_key.startswith("privacy.") and asset_key != "privacy.source_bound_runtime_report":
+        metadata = {
+            **metadata,
+            "status": "local_source_bound_runtime_ready",
+            "runtime_source": "privacy.source_bound_runtime_report",
+        }
     context.add_output_metadata(metadata)
     return metadata
 
@@ -708,6 +725,38 @@ def privacy_lifecycle_audit_contract(context) -> dict[str, str]:
     return privacy_analytics_asset_contract(context, "privacy.lifecycle_audit")
 
 
+@asset(name="source_bound_runtime_report", key_prefix=["privacy"], group_name="privacy_quality")
+def privacy_source_bound_runtime_report(context) -> dict[str, str]:
+    from ingest_worker import privacy_lifecycle_runtime
+
+    packet_path = Path(
+        os.getenv(
+            "PRIVACY_LIFECYCLE_SOURCE_PACKET_PATH",
+            str(PRIVACY_LIFECYCLE_DEFAULT_SOURCE_PACKET_PATH),
+        )
+    )
+    report = privacy_lifecycle_runtime.build_runtime_report_from_path(packet_path)
+    metadata = privacy_analytics_asset_contract(context, "privacy.source_bound_runtime_report")
+    output_metadata = {
+        **metadata,
+        "status": "passed",
+        "classification": report["classification"],
+        "target_name": report["source_binding"]["target_name"],
+        "target_class": report["source_binding"]["target_class"],
+        "source_window_start": report["source_binding"]["source_window"]["start"],
+        "source_window_end": report["source_binding"]["source_window"]["end"],
+        "retention_candidate_count": str(len(report["retention_candidates"])),
+        "anonymous_check_count": str(len(report["anonymous_candidate_checks"])),
+        "cleanup_action_count": str(len(report["cleanup_actions"])),
+        "audit_receipt_count": str(len(report["lifecycle_audit_receipts"])),
+        "api_exposure_enabled": "false",
+        "dashboard_exposure_enabled": "false",
+        "clickhouse_production_promotion": "false",
+    }
+    context.add_output_metadata(output_metadata)
+    return output_metadata
+
+
 @asset(name="stg_analytics_voice_session_summary", key_prefix=["stage"], group_name="voice_usage_stage")
 def stg_analytics_voice_session_summary_contract(context) -> dict[str, str]:
     return privacy_analytics_asset_contract(context, "stage.stg_analytics_voice_session_summary")
@@ -974,6 +1023,7 @@ defs = Definitions(
         privacy_personal_data_purge_contract,
         privacy_downstream_cleanup_checks_contract,
         privacy_lifecycle_audit_contract,
+        privacy_source_bound_runtime_report,
         stg_analytics_voice_session_summary_contract,
         s_voice_mic_activity_raw_contract,
         s_voice_speech_activity_daily_contract,

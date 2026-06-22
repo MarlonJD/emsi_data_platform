@@ -140,7 +140,11 @@ test -f soda/contracts/voice_usage_session_summary.yml
 test -f soda/contracts/privacy_lifecycle_contract.yml
 test -f soda/contracts/personal_recap_monthly.yml
 test -f ingest_worker/privacy_lifecycle_smoke.py
+test -f ingest_worker/privacy_lifecycle_runtime.py
+test -f ingest_worker/privacy_lifecycle_runtime_test.py
+test -f ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
 test -x scripts/run_privacy_lifecycle_smoke.sh
+test -x scripts/run_privacy_lifecycle_runtime.sh
 grep -q "analytics_mart/mart_product_reporting_content_performance_daily" soda/contracts/product_reporting_content_performance_daily.yml
 grep -q "analytics_mart/mart_product_reporting_feed_interest_proxy_daily" soda/contracts/product_reporting_feed_interest_proxy_daily.yml
 grep -q "Europe/Istanbul" soda/contracts/product_reporting_reaction_valence_daily.yml
@@ -157,6 +161,20 @@ grep -q "cleanup_account_deletion" ingest_worker/privacy_lifecycle_smoke.py
 grep -q "ClickHouse candidate-only non-canonical" ingest_worker/privacy_lifecycle_smoke.py
 grep -q "voiceSpeakerActivityAnalytics" ingest_worker/privacy_lifecycle_smoke.py
 grep -q "personalYearlyRecap" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "local_source_bound_privacy_lifecycle_runtime" ingest_worker/privacy_lifecycle_runtime.py
+grep -q "source_bound_packet_valid" dagster_project/definitions.py
+grep -q "privacy.source_bound_runtime_report" dagster_project/definitions.py
+grep -q "local_source_bound_runtime_ready" dagster_project/definitions.py
+grep -q "productionCollectionEnabled" ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
+grep -q '"apiExposureEnabled": false' ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
+grep -q '"dashboardExposureEnabled": false' ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
+grep -q '"clickhouseProductionEnabled": false' ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
+grep -q "PostgreSQL" ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
+grep -q "Redpanda/Kafka API" ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
+if grep -q "emsi_qa\\|emsi_qqq" ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json; then
+  echo "privacy lifecycle source-bound packet must not use QA or legacy report sources" >&2
+  exit 1
+fi
 grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
 grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
@@ -180,6 +198,9 @@ PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
 
 PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
   ./scripts/run_privacy_lifecycle_smoke.sh >/dev/null
+
+PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
+  ./scripts/run_privacy_lifecycle_runtime.sh >/dev/null
 
 if grep -R "soda-core-postgres" docker dbt dagster_project soda pyproject.toml docker-compose.yml docker-compose.superset-postgres-metadata.yml; then
   echo "legacy Soda v3 package found in runnable scaffold" >&2
