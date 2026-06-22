@@ -1,0 +1,53 @@
+dataset: analytics_postgres/analytics/analytics_mart/mart_product_reporting_together_coordination_daily
+
+checks:
+  - failed_rows:
+      name: Together coordination counts are bounded
+      qualifier: together_coordination_counts_bounded
+      expression: |
+        together_item_count < 0
+        OR together_created_count < 0
+        OR invite_sent_count < 0
+        OR share_count < 0
+        OR opened_count < 0
+        OR response_added_count < 0
+        OR reported_count < 0
+        OR invite_count_total < 0
+        OR response_count_total < 0
+        OR together_coordination_success_proxy_score IS NULL
+  - failed_rows:
+      name: Together coordination source completeness is labeled
+      qualifier: source_completeness_label_allowed
+      expression: |
+        source_completeness_label IS NULL
+        OR source_completeness_label NOT IN ('partial', 'complete')
+  - failed_rows:
+      name: Together coordination wording and timezone are contract-safe
+      qualifier: wording_timezone_contract_safe
+      expression: |
+        wording_status <> 'proxy/partial'
+        OR reporting_timezone <> 'Europe/Istanbul'
+        OR metric_contract_ids <> 'together_items_created_count_daily,together_response_count_daily,together_coordination_success_proxy_daily'
+        OR refreshed_at IS NULL
+
+columns:
+  - name: reporting_date
+    checks:
+      - missing:
+          name: Reporting date is present
+  - name: activity_type
+    checks:
+      - missing:
+          name: Activity type is present
+  - name: visibility
+    checks:
+      - missing:
+          name: Visibility is present
+  - name: together_status
+    checks:
+      - missing:
+          name: Together status is present
+  - name: channel_business_key
+    checks:
+      - missing:
+          name: Channel business key is present

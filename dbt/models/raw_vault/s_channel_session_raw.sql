@@ -1,0 +1,36 @@
+{{ config(materialized="view", tags=["product_reporting_phase1", "data_vault"]) }}
+
+select
+  channel_session_hk,
+  channel_session_hashdiff as hashdiff,
+  load_datetime,
+  record_source,
+  event_id,
+  event_name,
+  event_version,
+  reporting_date,
+  occurred_at,
+  received_at,
+  channel_hk,
+  channel_business_key,
+  channel_session_business_key,
+  channel_session_action,
+  entry_source,
+  exit_reason,
+  duration_ms,
+  unread_count_on_enter,
+  posts_seen_count,
+  comments_written_count,
+  reactions_added_count,
+  privacy_class,
+  consent_scope,
+  subject_user_hk,
+  subject_session_id,
+  source_completeness_input,
+  source_topic,
+  source_partition,
+  source_offset,
+  raw_record_sha256,
+  payload_sha256
+from {{ ref("stg_product_reporting_channel_sessions") }}
+where channel_session_hk is not null

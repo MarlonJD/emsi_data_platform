@@ -41,3 +41,31 @@ where occupation_cohort_share < 0
    or distinct_user_count < 0
    or total_user_count < 0
    or distinct_user_count > total_user_count
+
+union all
+
+select
+  's_together_coordination_daily'::text as model_name,
+  reporting_date::text as reporting_date,
+  concat_ws('||', activity_type, visibility, together_status, channel_business_key) as grain_key,
+  'together_coordination_score_mismatch'::text as violation,
+  together_coordination_success_proxy_score::numeric as observed_value,
+  (
+    together_created_count
+    + response_added_count * 2
+    + opened_count
+    + share_count
+    - reported_count * 3
+  )::numeric as expected_value
+from {{ ref("s_together_coordination_daily") }}
+where together_coordination_success_proxy_score <> (
+    together_created_count
+    + response_added_count * 2
+    + opened_count
+    + share_count
+    - reported_count * 3
+  )
+   or together_item_count < 0
+   or together_created_count < 0
+   or response_added_count < 0
+   or reported_count < 0

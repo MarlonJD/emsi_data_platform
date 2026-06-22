@@ -52,3 +52,14 @@ select
 from {{ ref("mart_product_reporting_feed_interest_proxy_daily") }}
 group by reporting_date, feed_item_reporting_key
 having count(*) > 1
+
+union all
+
+select
+  'mart_product_reporting_together_coordination_daily'::text as model_name,
+  reporting_date::text as reporting_date,
+  concat_ws('||', activity_type, visibility, together_status, channel_business_key) as grain_key,
+  count(*)::bigint as row_count
+from {{ ref("mart_product_reporting_together_coordination_daily") }}
+group by reporting_date, activity_type, visibility, together_status, channel_business_key
+having count(*) > 1

@@ -8,5 +8,5 @@ select
   suppression_rule,
   wording_status,
   coverage_status,
-  'product_reporting_phase3_pl'::text as product_layer_contract_status
+  product_layer_contract_status
 from {{ ref("product_reporting_bdv_contract_coverage") }}

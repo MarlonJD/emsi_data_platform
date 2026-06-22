@@ -58,6 +58,18 @@ with mart_rows as (
     wording_status,
     reporting_timezone
   from {{ ref("mart_product_reporting_feed_interest_proxy_daily") }}
+
+  union all
+
+  select
+    'mart_product_reporting_together_coordination_daily'::text as model_name,
+    reporting_date::text as reporting_date,
+    concat_ws('||', activity_type, visibility, together_status, channel_business_key) as grain_key,
+    source_completeness_label,
+    metric_contract_ids,
+    wording_status,
+    reporting_timezone
+  from {{ ref("mart_product_reporting_together_coordination_daily") }}
 )
 
 select *

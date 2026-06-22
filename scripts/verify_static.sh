@@ -8,6 +8,8 @@ grep -q "dagster==1.13.9" pyproject.toml
 grep -q "dbt-core==1.11.11" pyproject.toml
 grep -q "apt-get install -y --no-install-recommends git" docker/dbt/Dockerfile
 grep -q "apt-get install -y --no-install-recommends git" docker/dagster/Dockerfile
+grep -q "PYTHONPATH=/workspace" docker/dagster/Dockerfile
+grep -q "COPY ingest_worker /workspace/ingest_worker" docker/dagster/Dockerfile
 grep -q "SODA_CORE_VERSION=4.14.0" versions.env
 grep -q "SODA_POSTGRES_VERSION=4.14.0" versions.env
 grep -q "REDPANDA_IMAGE=redpandadata/redpanda:v26.1.10" versions.env
@@ -55,6 +57,9 @@ grep -q "event_business_key" dbt/models/raw_vault/hub_analytics_event.sql
 test -f dbt/models/staging/stg_product_reporting_content_events.sql
 test -f dbt/models/staging/stg_product_reporting_reactions.sql
 test -f dbt/models/staging/stg_product_reporting_feed_events.sql
+test -f dbt/models/staging/stg_product_reporting_channel_sessions.sql
+test -f dbt/models/staging/stg_product_reporting_event_funnel.sql
+test -f dbt/models/staging/stg_app_together_items.sql
 test -f dbt/models/raw_vault/hub_reporting_content.sql
 test -f dbt/models/raw_vault/hub_reporting_reaction.sql
 test -f dbt/models/raw_vault/hub_reporting_feed_item.sql
@@ -64,6 +69,15 @@ test -f dbt/models/raw_vault/sat_reporting_content_event.sql
 test -f dbt/models/raw_vault/sat_reporting_reaction_event.sql
 test -f dbt/models/raw_vault/sat_reporting_feed_serving_event.sql
 test -f dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+test -f dbt/models/raw_vault/h_channel.sql
+test -f dbt/models/raw_vault/l_user_channel_session.sql
+test -f dbt/models/raw_vault/s_channel_session_raw.sql
+test -f dbt/models/raw_vault/h_event.sql
+test -f dbt/models/raw_vault/l_event_participant.sql
+test -f dbt/models/raw_vault/s_event_metadata_raw.sql
+test -f dbt/models/raw_vault/h_together_item.sql
+test -f dbt/models/raw_vault/l_together_actor_target.sql
+test -f dbt/models/raw_vault/s_together_metadata_raw.sql
 test -f dbt/models/staging/stg_analytics_voice_session_summary.sql
 test -f dbt/models/raw_vault/h_voice_session.sql
 test -f dbt/models/raw_vault/h_voice_room.sql
@@ -79,6 +93,13 @@ test -f dbt/models/business_vault/s_occupation_cohort_daily.sql
 test -f dbt/models/business_vault/s_content_performance_daily.sql
 test -f dbt/models/business_vault/s_emoji_usage_daily.sql
 test -f dbt/models/business_vault/s_reaction_valence_daily.sql
+test -f dbt/models/business_vault/s_channel_session_daily.sql
+test -f dbt/models/business_vault/pit_event_daily.sql
+test -f dbt/models/business_vault/br_event_funnel.sql
+test -f dbt/models/business_vault/s_event_funnel_daily.sql
+test -f dbt/models/business_vault/pit_together_daily.sql
+test -f dbt/models/business_vault/br_together_response_flow.sql
+test -f dbt/models/business_vault/s_together_coordination_daily.sql
 test -f dbt/models/business_vault/s_voice_room_usage_daily.sql
 test -f dbt/models/business_vault/s_voice_qos_daily.sql
 test -f dbt/models/business_vault/s_voice_mic_usage_daily.sql
@@ -89,8 +110,19 @@ test -f dbt/models/mart/mart_product_reporting_content_performance_daily.sql
 test -f dbt/models/mart/mart_product_reporting_emoji_reaction_daily.sql
 test -f dbt/models/mart/mart_product_reporting_reaction_valence_daily.sql
 test -f dbt/models/mart/mart_product_reporting_feed_interest_proxy_daily.sql
+test -f dbt/models/mart/mart_product_reporting_together_coordination_daily.sql
 test -f dbt/models/mart/mart_product_reporting_contract_coverage.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_occupation_cohort_daily.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_content_performance_daily.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_emoji_reaction_daily.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_reaction_valence_daily.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_feed_interest_proxy_daily.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_together_coordination_daily.sql
+grep -q 'materialized="view"' dbt/models/mart/mart_product_reporting_contract_coverage.sql
 grep -q "product_reporting_phase1" dbt/models/staging/stg_product_reporting_content_events.sql
+grep -q "channel_session_started" dbt/models/staging/stg_product_reporting_channel_sessions.sql
+grep -q "event_card_impression" dbt/models/staging/stg_product_reporting_event_funnel.sql
+grep -q "together_%" dbt/models/staging/stg_app_together_items.sql
 grep -q "product_reporting_phase2" dbt/models/business_vault/s_content_performance_daily.sql
 grep -q "product_reporting_phase3" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
 grep -q "product_reporting_privacy_contract" dbt/models/staging/stg_analytics_voice_session_summary.sql
@@ -112,12 +144,15 @@ grep -q "metric_contract_ids" dbt/models/business_vault/s_content_performance_da
 grep -q "source_completeness_label" dbt/models/business_vault/br_feed_interest_proxy.sql
 grep -q "where small_cell_suppression_status = 'reportable'" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
 grep -q "metric_contract_ids" dbt/models/mart/mart_product_reporting_feed_interest_proxy_daily.sql
+grep -q "metric_contract_ids" dbt/models/mart/mart_product_reporting_together_coordination_daily.sql
 grep -q "reporting_timezone" dbt/models/mart/mart_product_reporting_reaction_valence_daily.sql
-if grep -R "tracking_token" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql dbt/models/business_vault/*.sql dbt/models/mart/*.sql; then
+grep -q "bdv_only_pending_pl" dbt/models/business_vault/product_reporting_bdv_contract_coverage.sql
+grep -q "together_coordination_success_proxy_daily" dbt/models/business_vault/product_reporting_bdv_contract_coverage.sql
+if grep -R "tracking_token" dbt/models/staging/stg_product_reporting_*.sql dbt/models/staging/stg_app_together_items.sql dbt/models/raw_vault/*reporting*.sql dbt/models/raw_vault/h_channel.sql dbt/models/raw_vault/l_user_channel_session.sql dbt/models/raw_vault/s_channel_session_raw.sql dbt/models/raw_vault/h_event.sql dbt/models/raw_vault/l_event_participant.sql dbt/models/raw_vault/s_event_metadata_raw.sql dbt/models/raw_vault/h_together_item.sql dbt/models/raw_vault/l_together_actor_target.sql dbt/models/raw_vault/s_together_metadata_raw.sql dbt/models/business_vault/*.sql dbt/models/mart/*.sql; then
   echo "product reporting models must not expose or derive from tracking tokens" >&2
   exit 1
 fi
-if grep -R "raw_content\\|post_body\\|comment_body\\|reply_body\\|dm_content\\|transcript\\|screenshot\\|exact_gps\\|contact_value\\|reveal_value\\|request_body\\|response_body" dbt/models/staging/stg_product_reporting_*.sql dbt/models/raw_vault/*reporting*.sql dbt/models/business_vault/*.sql dbt/models/mart/*.sql; then
+if grep -R "channel_title\\|raw_content\\|post_body\\|comment_body\\|reply_body\\|dm_content\\|transcript\\|screenshot\\|exact_gps\\|contact_value\\|reveal_value\\|request_body\\|response_body\\|prompt\\|note_body\\|raw_note" dbt/models/staging/stg_product_reporting_*.sql dbt/models/staging/stg_app_together_items.sql dbt/models/raw_vault/*reporting*.sql dbt/models/raw_vault/h_channel.sql dbt/models/raw_vault/l_user_channel_session.sql dbt/models/raw_vault/s_channel_session_raw.sql dbt/models/raw_vault/h_event.sql dbt/models/raw_vault/l_event_participant.sql dbt/models/raw_vault/s_event_metadata_raw.sql dbt/models/raw_vault/h_together_item.sql dbt/models/raw_vault/l_together_actor_target.sql dbt/models/raw_vault/s_together_metadata_raw.sql dbt/models/business_vault/*.sql dbt/models/mart/*.sql; then
   echo "product reporting models must not project blocked raw content/contact/location fields" >&2
   exit 1
 fi
@@ -135,6 +170,7 @@ test -f soda/contracts/product_reporting_content_performance_daily.yml
 test -f soda/contracts/product_reporting_emoji_reaction_daily.yml
 test -f soda/contracts/product_reporting_reaction_valence_daily.yml
 test -f soda/contracts/product_reporting_feed_interest_proxy_daily.yml
+test -f soda/contracts/product_reporting_together_coordination_daily.yml
 test -f soda/contracts/product_reporting_contract_coverage.yml
 test -f soda/contracts/voice_usage_session_summary.yml
 test -f soda/contracts/privacy_lifecycle_contract.yml
@@ -147,6 +183,7 @@ test -x scripts/run_privacy_lifecycle_smoke.sh
 test -x scripts/run_privacy_lifecycle_runtime.sh
 grep -q "analytics_mart/mart_product_reporting_content_performance_daily" soda/contracts/product_reporting_content_performance_daily.yml
 grep -q "analytics_mart/mart_product_reporting_feed_interest_proxy_daily" soda/contracts/product_reporting_feed_interest_proxy_daily.yml
+grep -q "analytics_mart/mart_product_reporting_together_coordination_daily" soda/contracts/product_reporting_together_coordination_daily.yml
 grep -q "Europe/Istanbul" soda/contracts/product_reporting_reaction_valence_daily.yml
 grep -q "voice_speaker_activity_gate_closed" soda/contracts/voice_usage_session_summary.yml
 grep -q "anonymization_failure_purge_required" soda/contracts/privacy_lifecycle_contract.yml
@@ -164,6 +201,8 @@ grep -q "personalYearlyRecap" ingest_worker/privacy_lifecycle_smoke.py
 grep -q "local_source_bound_privacy_lifecycle_runtime" ingest_worker/privacy_lifecycle_runtime.py
 grep -q "source_bound_packet_valid" dagster_project/definitions.py
 grep -q "privacy.source_bound_runtime_report" dagster_project/definitions.py
+grep -q "privacy.anonymize_or_delete_decisions" dagster_project/definitions.py
+grep -q "privacy.anonymize_or_delete_outcomes" dagster_project/definitions.py
 grep -q "local_source_bound_runtime_ready" dagster_project/definitions.py
 grep -q "productionCollectionEnabled" ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
 grep -q '"apiExposureEnabled": false' ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
@@ -177,6 +216,7 @@ if grep -q "emsi_qa\\|emsi_qqq" ingest_worker/fixtures/privacy_lifecycle_source_
 fi
 grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
 grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
+grep -q "product_reporting_together_coordination_daily.yml" dagster_project/definitions.py
 grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "privacy_lifecycle_daily_job" dagster_project/definitions.py
 grep -q "privacy_contract_guard_job" dagster_project/definitions.py

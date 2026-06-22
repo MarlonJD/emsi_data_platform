@@ -13,6 +13,7 @@ ARG PSYCOPG2_BINARY_VERSION=2.9.12
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace \
     DAGSTER_HOME=/workspace/.dagster
 
 WORKDIR /workspace
@@ -35,5 +36,6 @@ RUN pip install --no-cache-dir \
 COPY dagster_workspace.yaml /workspace/dagster_workspace.yaml
 COPY dagster_home /workspace/.dagster
 COPY dagster_project /workspace/dagster_project
+COPY ingest_worker /workspace/ingest_worker
 COPY dbt /workspace/dbt
 COPY soda /workspace/soda

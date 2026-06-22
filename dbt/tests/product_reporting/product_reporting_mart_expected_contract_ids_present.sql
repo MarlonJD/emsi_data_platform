@@ -9,7 +9,14 @@ with expected(metric_contract_id) as (
     ('emoji_usage_count_daily'),
     ('reaction_valence_count_daily'),
     ('feed_interest_proxy_score_daily'),
-    ('feed_interest_source_completeness_daily')
+    ('feed_interest_source_completeness_daily'),
+    ('channel_session_count_daily'),
+    ('channel_session_duration_ms_daily'),
+    ('event_funnel_action_count_daily'),
+    ('event_join_conversion_proxy_daily'),
+    ('together_items_created_count_daily'),
+    ('together_response_count_daily'),
+    ('together_coordination_success_proxy_daily')
 ),
 coverage as (
   select
@@ -54,4 +61,4 @@ where nullif(business_vault_model, '') is null
    or nullif(suppression_rule, '') is null
    or nullif(wording_status, '') is null
    or coverage_status <> 'covered_in_phase2_bdv'
-   or product_layer_contract_status <> 'product_reporting_phase3_pl'
+   or product_layer_contract_status not in ('product_reporting_phase3_pl', 'bdv_only_pending_pl')

@@ -6,7 +6,7 @@ checks:
       qualifier: coverage_status_allowed
       expression: |
         coverage_status <> 'covered_in_phase2_bdv'
-        OR product_layer_contract_status <> 'product_reporting_phase3_pl'
+        OR product_layer_contract_status NOT IN ('product_reporting_phase3_pl', 'bdv_only_pending_pl')
   - failed_rows:
       name: Product reporting contract metadata is present
       qualifier: contract_metadata_present
@@ -22,7 +22,7 @@ checks:
       qualifier: completeness_wording_allowed
       expression: |
         source_completeness_label NOT IN ('partial', 'complete')
-        OR wording_status NOT IN ('direct', 'proxy', 'explicit-signal-only', 'partial')
+        OR wording_status NOT IN ('direct', 'proxy', 'proxy/partial', 'explicit-signal-only', 'partial')
 
 columns:
   - name: metric_contract_id
@@ -42,3 +42,10 @@ columns:
             - "reaction_valence_count_daily"
             - "feed_interest_proxy_score_daily"
             - "feed_interest_source_completeness_daily"
+            - "channel_session_count_daily"
+            - "channel_session_duration_ms_daily"
+            - "event_funnel_action_count_daily"
+            - "event_join_conversion_proxy_daily"
+            - "together_items_created_count_daily"
+            - "together_response_count_daily"
+            - "together_coordination_success_proxy_daily"

@@ -55,8 +55,9 @@ docker compose --env-file versions.env --env-file .env --profile local run --rm 
 ```
 
 Product Reporting PL marts have focused Soda contracts under
-`soda/contracts/product_reporting_*.yml`. Run a single mart contract with the
-same runner, for example:
+`soda/contracts/product_reporting_*.yml`. The first family covers the six
+baseline PL marts plus the Together/social coordination mart. Run a single mart
+contract with the same runner, for example:
 
 ```sh
 docker compose --env-file versions.env --env-file .env --profile local run --rm soda-runner soda contract verify --data-source /workspace/soda/configuration.yml --contract /workspace/soda/contracts/product_reporting_content_performance_daily.yml
@@ -77,10 +78,12 @@ PRIVACY_LIFECYCLE_SOURCE_PACKET_PATH=/path/to/source-bound-packet.json ./scripts
 
 The check validates a source-bound packet, materializes the same semantics
 through the Dagster `privacy_lifecycle_daily_job` asset
-`privacy/source_bound_runtime_report`, and keeps production collection, API
-exposure, dashboard exposure, and ClickHouse promotion disabled. It accepts only
-bounded source references, hash references, owner approval refs, retention
-counts, and lifecycle decisions; it does not read `emsi_qa`, `emsi_qqq`, raw
+`privacy/source_bound_runtime_report`; the same job also exposes
+`privacy/anonymize_or_delete_decisions` and
+`privacy/anonymize_or_delete_outcomes`. These assets keep production collection,
+API exposure, dashboard exposure, and ClickHouse promotion disabled. They accept
+only bounded source references, hash references, owner approval refs, retention
+counts, and lifecycle decisions; they do not read `emsi_qa`, `emsi_qqq`, raw
 PII, or production warehouse data.
 
 Optional BI and observability profiles:

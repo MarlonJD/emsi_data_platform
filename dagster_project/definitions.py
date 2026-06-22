@@ -23,6 +23,7 @@ PRODUCT_REPORTING_SODA_CONTRACT_NAMES = (
     "product_reporting_emoji_reaction_daily.yml",
     "product_reporting_reaction_valence_daily.yml",
     "product_reporting_feed_interest_proxy_daily.yml",
+    "product_reporting_together_coordination_daily.yml",
     "product_reporting_contract_coverage.yml",
 )
 PRODUCT_REPORTING_SODA_CONTRACT_PATHS = tuple(
@@ -81,6 +82,24 @@ PRODUCT_REPORTING_PHASE1_ASSETS = {
         "freshness": "<= 15 minutes",
         "checks": "accepted_feed_event_names_only, source_completeness_label_present, interest_proxy_valence_present",
     },
+    "stage.stg_product_reporting_channel_sessions": {
+        "group": "product_reporting_stage",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "text_channel_session_events_only, no_raw_channel_title, bounded_duration_fields",
+    },
+    "stage.stg_product_reporting_event_funnel": {
+        "group": "product_reporting_stage",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "event_funnel_events_only, bounded_event_fields, no_location_or_free_text",
+    },
+    "stage.stg_app_together_items": {
+        "group": "product_reporting_stage",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "together_events_only, no_prompt_or_note_text, bounded_coordination_fields",
+    },
     "raw_vault.hub_reporting_content": {
         "group": "product_reporting_raw_vault",
         "cadence": "hourly_reporting_job",
@@ -135,6 +154,60 @@ PRODUCT_REPORTING_PHASE1_ASSETS = {
         "freshness": "<= 24 hours",
         "checks": "source_to_stage_counts_present, missing_business_key_count_visible",
     },
+    "raw_vault.h_channel": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hub_hash_key_not_null, hub_hash_key_unique, no_raw_channel_title",
+    },
+    "raw_vault.l_user_channel_session": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "link_hash_key_not_null, linked_subject_channel_session_present",
+    },
+    "raw_vault.s_channel_session_raw": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hashdiff_present, bounded_channel_session_fields, forbidden_raw_fields_absent",
+    },
+    "raw_vault.h_event": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hub_hash_key_not_null, hub_hash_key_unique, no_exact_location",
+    },
+    "raw_vault.l_event_participant": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "link_hash_key_not_null, linked_subject_event_action_present",
+    },
+    "raw_vault.s_event_metadata_raw": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hashdiff_present, event_funnel_fields_bounded, no_location_or_free_text",
+    },
+    "raw_vault.h_together_item": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hub_hash_key_not_null, hub_hash_key_unique",
+    },
+    "raw_vault.l_together_actor_target": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "link_hash_key_not_null, actor_target_keys_present",
+    },
+    "raw_vault.s_together_metadata_raw": {
+        "group": "product_reporting_raw_vault",
+        "cadence": "hourly_reporting_job",
+        "freshness": "<= 1 hour",
+        "checks": "hashdiff_present, no_together_prompt_or_note_text, bounded_coordination_fields",
+    },
 }
 
 PRODUCT_REPORTING_PHASE2_ASSETS = {
@@ -186,6 +259,48 @@ PRODUCT_REPORTING_PHASE2_ASSETS = {
         "freshness": "<= 24 hours",
         "checks": "phase2_metric_contracts_covered, wording_status_present, suppression_rule_present",
     },
+    "business_vault.s_channel_session_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "channel_session_count_and_duration, small_cell_suppression_present, bdv_only_pending_pl",
+    },
+    "business_vault.pit_event_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "event_daily_pit_grain, source_completeness_label_present, suppression_status_present",
+    },
+    "business_vault.br_event_funnel": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "event_action_bridge_grain, proxy_wording_pending_pl, suppression_status_present",
+    },
+    "business_vault.s_event_funnel_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "event_funnel_contract_ids_present, proxy_partial_wording, bdv_only_pending_pl",
+    },
+    "business_vault.pit_together_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "together_daily_pit_grain, bounded_status_fields, suppression_status_present",
+    },
+    "business_vault.br_together_response_flow": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "response_flow_bridge_grain, no_private_affinity, suppression_status_present",
+    },
+    "business_vault.s_together_coordination_daily": {
+        "group": "product_reporting_business_vault",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "together_metric_contract_ids_present, proxy_partial_wording, suppression_status_present",
+    },
 }
 
 PRODUCT_REPORTING_PHASE3_ASSETS = {
@@ -218,6 +333,12 @@ PRODUCT_REPORTING_PHASE3_ASSETS = {
         "cadence": "hourly_reporting_job",
         "freshness": "<= 1 hour",
         "checks": "suppressed_rows_absent, proxy_wording_status, source_completeness_label_present",
+    },
+    "mart.mart_product_reporting_together_coordination_daily": {
+        "group": "product_reporting_mart",
+        "cadence": "daily_business_reporting_job",
+        "freshness": "<= 24 hours",
+        "checks": "suppressed_rows_absent, proxy_partial_wording, no_private_communication_affinity",
     },
     "mart.mart_product_reporting_contract_coverage": {
         "group": "product_reporting_mart_quality",
@@ -320,6 +441,20 @@ PRIVACY_LIFECYCLE_ASSETS = {
         "cadence": "privacy_lifecycle_daily_job",
         "freshness": "<= 24 hours",
         "checks": "publish_only_after_passed_checks, anonymous_zone_no_stable_identifier",
+        "status": "local_source_bound_runtime_ready",
+    },
+    "privacy.anonymize_or_delete_decisions": {
+        "group": "privacy_deletion",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "expired_records_have_anonymize_or_delete_decision, failed_anonymization_routes_to_delete",
+        "status": "local_source_bound_runtime_ready",
+    },
+    "privacy.anonymize_or_delete_outcomes": {
+        "group": "privacy_quality",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "anonymous_publish_or_personal_purge_recorded, lifecycle_audit_receipts_present",
         "status": "local_source_bound_runtime_ready",
     },
     "privacy.expired_personal_candidates": {
@@ -462,6 +597,21 @@ def stg_product_reporting_feed_events_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "stage.stg_product_reporting_feed_events")
 
 
+@asset(name="stg_product_reporting_channel_sessions", key_prefix=["stage"], group_name="product_reporting_stage")
+def stg_product_reporting_channel_sessions_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "stage.stg_product_reporting_channel_sessions")
+
+
+@asset(name="stg_product_reporting_event_funnel", key_prefix=["stage"], group_name="product_reporting_stage")
+def stg_product_reporting_event_funnel_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "stage.stg_product_reporting_event_funnel")
+
+
+@asset(name="stg_app_together_items", key_prefix=["stage"], group_name="product_reporting_stage")
+def stg_app_together_items_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "stage.stg_app_together_items")
+
+
 @asset(name="hub_reporting_content", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
 def hub_reporting_content_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "raw_vault.hub_reporting_content")
@@ -505,6 +655,51 @@ def sat_reporting_feed_serving_event_contract(context) -> dict[str, str]:
 @asset(name="product_reporting_stage_reconciliation", key_prefix=["raw_vault"], group_name="product_reporting_quality")
 def product_reporting_stage_reconciliation_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "raw_vault.product_reporting_stage_reconciliation")
+
+
+@asset(name="h_channel", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def h_channel_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.h_channel")
+
+
+@asset(name="l_user_channel_session", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def l_user_channel_session_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.l_user_channel_session")
+
+
+@asset(name="s_channel_session_raw", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def s_channel_session_raw_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.s_channel_session_raw")
+
+
+@asset(name="h_event", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def h_event_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.h_event")
+
+
+@asset(name="l_event_participant", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def l_event_participant_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.l_event_participant")
+
+
+@asset(name="s_event_metadata_raw", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def s_event_metadata_raw_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.s_event_metadata_raw")
+
+
+@asset(name="h_together_item", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def h_together_item_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.h_together_item")
+
+
+@asset(name="l_together_actor_target", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def l_together_actor_target_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.l_together_actor_target")
+
+
+@asset(name="s_together_metadata_raw", key_prefix=["raw_vault"], group_name="product_reporting_raw_vault")
+def s_together_metadata_raw_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "raw_vault.s_together_metadata_raw")
 
 
 @asset(name="pit_reporting_content_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
@@ -551,6 +746,41 @@ def product_reporting_bdv_contract_coverage_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "business_vault.product_reporting_bdv_contract_coverage")
 
 
+@asset(name="s_channel_session_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_channel_session_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_channel_session_daily")
+
+
+@asset(name="pit_event_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def pit_event_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.pit_event_daily")
+
+
+@asset(name="br_event_funnel", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def br_event_funnel_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.br_event_funnel")
+
+
+@asset(name="s_event_funnel_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_event_funnel_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_event_funnel_daily")
+
+
+@asset(name="pit_together_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def pit_together_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.pit_together_daily")
+
+
+@asset(name="br_together_response_flow", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def br_together_response_flow_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.br_together_response_flow")
+
+
+@asset(name="s_together_coordination_daily", key_prefix=["business_vault"], group_name="product_reporting_business_vault")
+def s_together_coordination_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "business_vault.s_together_coordination_daily")
+
+
 @asset(
     name="mart_product_reporting_occupation_cohort_daily",
     key_prefix=["mart"],
@@ -594,6 +824,15 @@ def mart_product_reporting_reaction_valence_daily_contract(context) -> dict[str,
 )
 def mart_product_reporting_feed_interest_proxy_daily_contract(context) -> dict[str, str]:
     return product_reporting_asset_contract(context, "mart.mart_product_reporting_feed_interest_proxy_daily")
+
+
+@asset(
+    name="mart_product_reporting_together_coordination_daily",
+    key_prefix=["mart"],
+    group_name="product_reporting_mart",
+)
+def mart_product_reporting_together_coordination_daily_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "mart.mart_product_reporting_together_coordination_daily")
 
 
 @asset(
@@ -703,6 +942,58 @@ def privacy_anonymization_checks_contract(context) -> dict[str, str]:
 @asset(name="anonymous_aggregate_publish", key_prefix=["privacy"], group_name="privacy_anonymization")
 def privacy_anonymous_aggregate_publish_contract(context) -> dict[str, str]:
     return privacy_analytics_asset_contract(context, "privacy.anonymous_aggregate_publish")
+
+
+@asset(name="anonymize_or_delete_decisions", key_prefix=["privacy"], group_name="privacy_deletion")
+def privacy_anonymize_or_delete_decisions_contract(context) -> dict[str, str]:
+    from ingest_worker import privacy_lifecycle_runtime
+
+    packet_path = Path(
+        os.getenv(
+            "PRIVACY_LIFECYCLE_SOURCE_PACKET_PATH",
+            str(PRIVACY_LIFECYCLE_DEFAULT_SOURCE_PACKET_PATH),
+        )
+    )
+    report = privacy_lifecycle_runtime.build_runtime_report_from_path(packet_path)
+    metadata = privacy_analytics_asset_contract(context, "privacy.anonymize_or_delete_decisions")
+    anonymize_count = sum(1 for check in report["anonymous_candidate_checks"] if check["passed"])
+    delete_count = sum(1 for check in report["anonymous_candidate_checks"] if not check["passed"])
+    output_metadata = {
+        **metadata,
+        "status": "passed",
+        "decision_policy": "anonymize_or_delete",
+        "anonymize_decision_count": str(anonymize_count),
+        "delete_decision_count": str(delete_count),
+        "api_exposure_enabled": "false",
+        "dashboard_exposure_enabled": "false",
+    }
+    context.add_output_metadata(output_metadata)
+    return output_metadata
+
+
+@asset(name="anonymize_or_delete_outcomes", key_prefix=["privacy"], group_name="privacy_quality")
+def privacy_anonymize_or_delete_outcomes_contract(context) -> dict[str, str]:
+    from ingest_worker import privacy_lifecycle_runtime
+
+    packet_path = Path(
+        os.getenv(
+            "PRIVACY_LIFECYCLE_SOURCE_PACKET_PATH",
+            str(PRIVACY_LIFECYCLE_DEFAULT_SOURCE_PACKET_PATH),
+        )
+    )
+    report = privacy_lifecycle_runtime.build_runtime_report_from_path(packet_path)
+    metadata = privacy_analytics_asset_contract(context, "privacy.anonymize_or_delete_outcomes")
+    output_metadata = {
+        **metadata,
+        "status": "passed",
+        "published_anonymous_aggregate_count": str(len(report["published_anonymous_aggregates"])),
+        "purged_source_record_ref_count": str(len(report["purged_source_record_refs"])),
+        "audit_receipt_count": str(len(report["lifecycle_audit_receipts"])),
+        "production_collection_enabled": "false",
+        "clickhouse_production_promotion": "false",
+    }
+    context.add_output_metadata(output_metadata)
+    return output_metadata
 
 
 @asset(name="expired_personal_candidates", key_prefix=["privacy"], group_name="privacy_deletion")
@@ -984,6 +1275,9 @@ defs = Definitions(
         stg_product_reporting_content_events_contract,
         stg_product_reporting_reactions_contract,
         stg_product_reporting_feed_events_contract,
+        stg_product_reporting_channel_sessions_contract,
+        stg_product_reporting_event_funnel_contract,
+        stg_app_together_items_contract,
         hub_reporting_content_contract,
         hub_reporting_reaction_contract,
         hub_reporting_feed_item_contract,
@@ -993,6 +1287,15 @@ defs = Definitions(
         sat_reporting_reaction_event_contract,
         sat_reporting_feed_serving_event_contract,
         product_reporting_stage_reconciliation_contract,
+        h_channel_contract,
+        l_user_channel_session_contract,
+        s_channel_session_raw_contract,
+        h_event_contract,
+        l_event_participant_contract,
+        s_event_metadata_raw_contract,
+        h_together_item_contract,
+        l_together_actor_target_contract,
+        s_together_metadata_raw_contract,
         pit_reporting_content_daily_contract,
         br_content_reaction_daily_contract,
         br_feed_interest_proxy_contract,
@@ -1001,11 +1304,19 @@ defs = Definitions(
         s_emoji_usage_daily_contract,
         s_reaction_valence_daily_contract,
         product_reporting_bdv_contract_coverage_contract,
+        s_channel_session_daily_contract,
+        pit_event_daily_contract,
+        br_event_funnel_contract,
+        s_event_funnel_daily_contract,
+        pit_together_daily_contract,
+        br_together_response_flow_contract,
+        s_together_coordination_daily_contract,
         mart_product_reporting_occupation_cohort_daily_contract,
         mart_product_reporting_content_performance_daily_contract,
         mart_product_reporting_emoji_reaction_daily_contract,
         mart_product_reporting_reaction_valence_daily_contract,
         mart_product_reporting_feed_interest_proxy_daily_contract,
+        mart_product_reporting_together_coordination_daily_contract,
         mart_product_reporting_contract_coverage_contract,
         product_reporting_stage_reconciliation_invariants_contract,
         product_reporting_bdv_formula_invariants_contract,
@@ -1019,6 +1330,8 @@ defs = Definitions(
         privacy_anonymous_candidate_build_contract,
         privacy_anonymization_checks_contract,
         privacy_anonymous_aggregate_publish_contract,
+        privacy_anonymize_or_delete_decisions_contract,
+        privacy_anonymize_or_delete_outcomes_contract,
         privacy_expired_personal_candidates_contract,
         privacy_personal_data_purge_contract,
         privacy_downstream_cleanup_checks_contract,
