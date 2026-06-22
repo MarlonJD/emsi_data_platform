@@ -321,6 +321,29 @@ participant_orphans as (
     where hub.together_item_hk is null
   ) link
   group by link.model_name, link.link_hk, link.participant_role, link.participant_hk, link.violation
+),
+
+controlled_link_orphan_fixture as (
+  {% if var("force_product_reporting_rdv_link_negative_failure", false) %}
+  select
+    'link_reporting_reaction_content'::text as model_name,
+    fixture.link_hk::text as link_hk,
+    'content_hk'::text as participant_role,
+    fixture.content_hk::text as participant_hk,
+    'controlled_link_orphan_fixture'::text as violation,
+    count(*) as failing_row_count
+  from (
+    select
+      'controlled_missing_link_hk'::text as link_hk,
+      'controlled_missing_content_hk'::text as content_hk
+  ) fixture
+  left join {{ ref("hub_reporting_content") }} hub
+    on fixture.content_hk = hub.content_hk
+  where hub.content_hk is null
+  group by fixture.link_hk, fixture.content_hk
+  {% else %}
+  select * from participant_orphans where false
+  {% endif %}
 )
 
 select * from required_participant_failures
@@ -332,3 +355,5 @@ union all
 select * from link_hash_participant_drift
 union all
 select * from participant_orphans
+union all
+select * from controlled_link_orphan_fixture

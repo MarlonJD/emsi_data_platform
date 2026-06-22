@@ -377,6 +377,13 @@ PRODUCT_REPORTING_PHASE5_ASSETS = {
         "checks": "link_hash_key_not_null, participant_keys_not_null, link_hash_key_unique, linked_hubs_present, no_pairwise_voice_or_private_affinity_expansion",
         "dbt_test": "product_reporting_rdv_link_invariants",
     },
+    "quality.product_reporting_rdv_satellite_invariants": {
+        "group": "product_reporting_quality",
+        "cadence": "nightly_quality_job",
+        "freshness": "<= 24 hours",
+        "checks": "satellite_parent_exists, history_grain_unique, hashdiff_state_stable, load_timestamp_not_before_received_at, forbidden_satellite_fields_absent, disabled_voice_conditional_path",
+        "dbt_test": "product_reporting_rdv_satellite_invariants",
+    },
     "quality.product_reporting_bdv_formula_invariants": {
         "group": "product_reporting_business_vault_quality",
         "cadence": "nightly_quality_job",
@@ -905,6 +912,15 @@ def product_reporting_rdv_link_invariants_contract(context) -> dict[str, str]:
 
 
 @asset(
+    name="product_reporting_rdv_satellite_invariants",
+    key_prefix=["quality"],
+    group_name="product_reporting_quality",
+)
+def product_reporting_rdv_satellite_invariants_contract(context) -> dict[str, str]:
+    return product_reporting_asset_contract(context, "quality.product_reporting_rdv_satellite_invariants")
+
+
+@asset(
     name="product_reporting_bdv_formula_invariants",
     key_prefix=["quality"],
     group_name="product_reporting_business_vault_quality",
@@ -1373,6 +1389,7 @@ defs = Definitions(
         product_reporting_stage_reconciliation_negative_fixture_guard_contract,
         product_reporting_rdv_hub_invariants_contract,
         product_reporting_rdv_link_invariants_contract,
+        product_reporting_rdv_satellite_invariants_contract,
         product_reporting_bdv_formula_invariants_contract,
         product_reporting_mart_no_duplicate_daily_keys_contract,
         product_reporting_mart_contract_metadata_present_contract,

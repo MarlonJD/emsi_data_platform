@@ -88,6 +88,18 @@ grep -q "feed_item_hub_missing" dbt/tests/product_reporting/product_reporting_rd
 grep -q "channel_hub_missing" dbt/tests/product_reporting/product_reporting_rdv_link_invariants.sql
 grep -q "event_hub_missing" dbt/tests/product_reporting/product_reporting_rdv_link_invariants.sql
 grep -q "together_item_hub_missing" dbt/tests/product_reporting/product_reporting_rdv_link_invariants.sql
+grep -q "force_product_reporting_rdv_link_negative_failure" dbt/tests/product_reporting/product_reporting_rdv_link_invariants.sql
+grep -q "controlled_link_orphan_fixture" dbt/tests/product_reporting/product_reporting_rdv_link_invariants.sql
+test -f dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "satellite_parent_missing" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "satellite_required_field_null" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "satellite_grain_conflict" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "satellite_hashdiff_state_drift" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "satellite_duplicate_exact_replay" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "force_product_reporting_rdv_satellite_orphan_failure" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "force_product_reporting_rdv_satellite_conflict_failure" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "voice_speaker_activity_conditional_path_enabled" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
+grep -q "s_voice_mic_activity_raw" dbt/tests/product_reporting/product_reporting_rdv_satellite_invariants.sql
 test -f dbt/models/raw_vault/h_channel.sql
 test -f dbt/models/raw_vault/l_user_channel_session.sql
 test -f dbt/models/raw_vault/s_channel_session_raw.sql
@@ -156,6 +168,7 @@ grep -q "product_reporting_stage_reconciliation" dagster_project/definitions.py
 grep -q "product_reporting_stage_reconciliation_negative_fixture_guard" dagster_project/definitions.py
 grep -q "product_reporting_rdv_hub_invariants" dagster_project/definitions.py
 grep -q "product_reporting_rdv_link_invariants" dagster_project/definitions.py
+grep -q "product_reporting_rdv_satellite_invariants" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_job" dagster_project/definitions.py
 grep -q "product_reporting_phase3_pl_job" dagster_project/definitions.py
