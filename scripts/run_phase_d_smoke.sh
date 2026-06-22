@@ -13,7 +13,7 @@ docker compose "${COMPOSE_ENV_ARGS[@]}" --profile local --profile streaming up -
   analytics-postgres dagster-postgres redpanda redpanda-topic-init analytics-ingest-worker
 
 docker compose "${COMPOSE_ENV_ARGS[@]}" --profile local build \
-  dbt-runner soda-runner dagster-webserver
+  dbt-runner soda-runner dagster-webserver dagster-daemon
 
 docker compose "${COMPOSE_ENV_ARGS[@]}" --profile local run --rm dbt-runner \
   dbt deps --project-dir /workspace/dbt
@@ -26,5 +26,4 @@ docker compose "${COMPOSE_ENV_ARGS[@]}" --profile local run --rm soda-runner \
   soda contract verify --data-source /workspace/soda/configuration.yml \
     --contract /workspace/soda/contracts/raw_event_landing.yml
 
-docker compose "${COMPOSE_ENV_ARGS[@]}" --profile local run --rm dagster-webserver \
-  dagster job execute -f /workspace/dagster_project/definitions.py -j phase_d_local_smoke_job
+./scripts/launch_dagster_job.sh phase_d_local_smoke_job

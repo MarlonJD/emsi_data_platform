@@ -79,6 +79,17 @@ default and create Airflow-style historical ticks and runs in the Dagster UI:
   `product_reporting_phase5_quality_job` at 06:45 Europe/Istanbul.
 
 The Dagster UI is available at `http://localhost:3000` in the local profile.
+For manual local launches that should show up under the Dagster code location
+and Overview timeline, use the workspace-backed helper instead of
+`dagster job execute`:
+
+```sh
+./scripts/launch_dagster_job.sh product_reporting_phase5_quality_job
+./scripts/launch_dagster_job.sh privacy_lifecycle_daily_job
+```
+
+Older CLI `dagster job execute` runs remain visible under Runs, but they do not
+carry the same external code-location origin metadata.
 
 Run the local/source-bound privacy lifecycle runtime check with the default
 bounded packet, or point it at another approved local packet:

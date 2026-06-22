@@ -28,6 +28,17 @@ running, so Dagster records schedule ticks and runs in the UI at
 - `product_reporting_phase5_quality_daily_schedule` runs
   `product_reporting_phase5_quality_job` at 06:45 Europe/Istanbul.
 
+For a manual Dagster run that should attach to the `emsi_data_platform` code
+location in the UI, launch through the workspace-backed helper:
+
+```sh
+./scripts/launch_dagster_job.sh product_reporting_phase5_quality_job
+```
+
+Use direct `dagster job execute` only for intentionally isolated CLI debugging;
+those runs remain visible under Runs but do not carry the same external
+code-location origin metadata.
+
 ## Event Streaming Profile
 
 ```sh
@@ -82,7 +93,7 @@ The smoke starts local analytics and Dagster metadata PostgreSQL, then runs:
 - `dbt debug`;
 - `dbt run --select tag:phase_d_smoke`;
 - `soda contract verify --data-source /workspace/soda/configuration.yml --contract /workspace/soda/contracts/raw_event_landing.yml`;
-- `dagster job execute -f /workspace/dagster_project/definitions.py -j phase_d_local_smoke_job`.
+- `./scripts/launch_dagster_job.sh phase_d_local_smoke_job`.
 
 The dbt slice creates the first local staging view over
 `analytics.raw_event_landing` plus Raw Vault-compatible event hub and payload

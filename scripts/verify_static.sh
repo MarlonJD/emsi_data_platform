@@ -221,6 +221,7 @@ test -f ingest_worker/privacy_lifecycle_runtime_test.py
 test -f ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
 test -x scripts/run_privacy_lifecycle_smoke.sh
 test -x scripts/run_privacy_lifecycle_runtime.sh
+test -x scripts/launch_dagster_job.sh
 grep -q "analytics_mart/mart_product_reporting_content_performance_daily" soda/contracts/product_reporting_content_performance_daily.yml
 grep -q "analytics_mart/mart_product_reporting_feed_interest_proxy_daily" soda/contracts/product_reporting_feed_interest_proxy_daily.yml
 grep -q "analytics_mart/mart_product_reporting_together_coordination_daily" soda/contracts/product_reporting_together_coordination_daily.yml
@@ -268,6 +269,10 @@ grep -q "Europe/Istanbul" dagster_project/definitions.py
 grep -q "voice_usage_soda_contracts" dagster_project/definitions.py
 grep -q "personal_recap_deletion_checks" dagster_project/definitions.py
 grep -q "soda contract verify" scripts/run_phase_d_smoke.sh
+grep -q "./scripts/launch_dagster_job.sh phase_d_local_smoke_job" scripts/run_phase_d_smoke.sh
+grep -q "dagster job launch" scripts/launch_dagster_job.sh
+grep -q "/workspace/dagster_workspace.yaml" scripts/launch_dagster_job.sh
+grep -q "emsi.launcher" scripts/launch_dagster_job.sh
 grep -q "phase_d_local_smoke_job" dagster_project/definitions.py
 grep -q "note_body" dagster_project/definitions.py
 grep -q "reveal_payload" dagster_project/definitions.py
