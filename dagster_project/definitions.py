@@ -353,7 +353,7 @@ PRODUCT_REPORTING_PHASE5_ASSETS = {
         "group": "product_reporting_quality",
         "cadence": "nightly_quality_job",
         "freshness": "<= 24 hours",
-        "checks": "row_count_non_negative, distinct_events_not_above_rows, missing_business_keys_bounded, accepted_landing_to_stage_balances",
+        "checks": "row_count_non_negative, distinct_events_not_above_rows, missing_business_keys_bounded, accepted_landing_to_stage_balances, event_id_raw_hash_contradictions_zero",
         "dbt_test": "product_reporting_stage_reconciliation_invariants",
     },
     "quality.product_reporting_stage_reconciliation_negative_fixture_guard": {

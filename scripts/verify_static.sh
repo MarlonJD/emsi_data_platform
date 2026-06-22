@@ -72,6 +72,8 @@ test -f dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
 grep -q "accepted_source_count" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
 grep -q "expected_excluded_count" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
 grep -q "unexplained_delta" dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+grep -q "force_product_reporting_landing_contradiction_failure" dbt/tests/product_reporting/product_reporting_stage_reconciliation_invariants.sql
+grep -q "event_id_raw_hash_contradiction" dbt/tests/product_reporting/product_reporting_stage_reconciliation_invariants.sql
 test -f dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
 grep -q "force_product_reporting_stage_reconciliation_negative_failure" dbt/tests/product_reporting/product_reporting_stage_reconciliation_negative_fixture_guard.sql
 test -f dbt/tests/product_reporting/product_reporting_rdv_hub_invariants.sql
