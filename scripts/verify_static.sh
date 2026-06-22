@@ -64,6 +64,14 @@ test -f dbt/models/raw_vault/sat_reporting_content_event.sql
 test -f dbt/models/raw_vault/sat_reporting_reaction_event.sql
 test -f dbt/models/raw_vault/sat_reporting_feed_serving_event.sql
 test -f dbt/models/raw_vault/product_reporting_stage_reconciliation.sql
+test -f dbt/models/staging/stg_analytics_voice_session_summary.sql
+test -f dbt/models/raw_vault/h_voice_session.sql
+test -f dbt/models/raw_vault/h_voice_room.sql
+test -f dbt/models/raw_vault/l_voice_session_room.sql
+test -f dbt/models/raw_vault/l_voice_participant_session.sql
+test -f dbt/models/raw_vault/s_voice_usage_session_raw.sql
+test -f dbt/models/raw_vault/s_voice_qoe_raw.sql
+test -f dbt/models/raw_vault/s_voice_mic_activity_raw.sql
 test -f dbt/models/business_vault/pit_reporting_content_daily.sql
 test -f dbt/models/business_vault/br_content_reaction_daily.sql
 test -f dbt/models/business_vault/br_feed_interest_proxy.sql
@@ -71,6 +79,10 @@ test -f dbt/models/business_vault/s_occupation_cohort_daily.sql
 test -f dbt/models/business_vault/s_content_performance_daily.sql
 test -f dbt/models/business_vault/s_emoji_usage_daily.sql
 test -f dbt/models/business_vault/s_reaction_valence_daily.sql
+test -f dbt/models/business_vault/s_voice_room_usage_daily.sql
+test -f dbt/models/business_vault/s_voice_qos_daily.sql
+test -f dbt/models/business_vault/s_voice_mic_usage_daily.sql
+test -f dbt/models/business_vault/s_voice_speech_activity_daily.sql
 test -f dbt/models/business_vault/product_reporting_bdv_contract_coverage.sql
 test -f dbt/models/mart/mart_product_reporting_occupation_cohort_daily.sql
 test -f dbt/models/mart/mart_product_reporting_content_performance_daily.sql
@@ -81,6 +93,9 @@ test -f dbt/models/mart/mart_product_reporting_contract_coverage.sql
 grep -q "product_reporting_phase1" dbt/models/staging/stg_product_reporting_content_events.sql
 grep -q "product_reporting_phase2" dbt/models/business_vault/s_content_performance_daily.sql
 grep -q "product_reporting_phase3" dbt/models/mart/mart_product_reporting_content_performance_daily.sql
+grep -q "product_reporting_privacy_contract" dbt/models/staging/stg_analytics_voice_session_summary.sql
+grep -q "voice_speaker_activity_legal_mode" dbt/models/staging/stg_analytics_voice_session_summary.sql
+grep -q "production_write_enabled = false" dbt/models/business_vault/s_voice_speech_activity_daily.sql
 grep -q "source_completeness_input" dbt/models/staging/stg_product_reporting_feed_events.sql
 grep -q "occupation_cohort_key" dbt/models/staging/stg_product_reporting_content_events.sql
 grep -q "emoji_key" dbt/models/staging/stg_product_reporting_reactions.sql
@@ -106,6 +121,10 @@ if grep -R "raw_content\\|post_body\\|comment_body\\|reply_body\\|dm_content\\|t
   echo "product reporting models must not project blocked raw content/contact/location fields" >&2
   exit 1
 fi
+if grep -R "raw_audio\\|audio_frame\\|spoken_words\\|voiceprint\\|speaker_embedding\\|speaking_timeline\\|speaking_interval\\|vad_frame_list\\|co_participant_key\\|pairwise_duration\\|private_room_name\\|raw_room_title\\|exact_gps\\|request_body\\|response_body\\|screenshot\\|ocr\\|raw_filename" dbt/models/staging/stg_analytics_voice_session_summary.sql dbt/models/raw_vault/*voice*.sql dbt/models/business_vault/*voice*.sql; then
+  echo "voice usage models must not project blocked audio/content/pairwise fields" >&2
+  exit 1
+fi
 grep -q "name: analytics_postgres" soda/configuration.yml
 grep -q "dataset: analytics_postgres/analytics/analytics/raw_event_landing" soda/contracts/raw_event_landing.yml
 grep -q "note_body" soda/contracts/raw_event_landing.yml
@@ -117,16 +136,30 @@ test -f soda/contracts/product_reporting_emoji_reaction_daily.yml
 test -f soda/contracts/product_reporting_reaction_valence_daily.yml
 test -f soda/contracts/product_reporting_feed_interest_proxy_daily.yml
 test -f soda/contracts/product_reporting_contract_coverage.yml
+test -f soda/contracts/voice_usage_session_summary.yml
+test -f soda/contracts/privacy_lifecycle_contract.yml
+test -f soda/contracts/personal_recap_monthly.yml
 grep -q "analytics_mart/mart_product_reporting_content_performance_daily" soda/contracts/product_reporting_content_performance_daily.yml
 grep -q "analytics_mart/mart_product_reporting_feed_interest_proxy_daily" soda/contracts/product_reporting_feed_interest_proxy_daily.yml
 grep -q "Europe/Istanbul" soda/contracts/product_reporting_reaction_valence_daily.yml
+grep -q "voice_speaker_activity_gate_closed" soda/contracts/voice_usage_session_summary.yml
+grep -q "anonymization_failure_purge_required" soda/contracts/privacy_lifecycle_contract.yml
+grep -q "personal_recap_opt_in_required" soda/contracts/personal_recap_monthly.yml
 grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
 grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
+grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
+grep -q "privacy_lifecycle_daily_job" dagster_project/definitions.py
+grep -q "privacy_contract_guard_job" dagster_project/definitions.py
+grep -q "voice_usage_soda_contracts" dagster_project/definitions.py
+grep -q "personal_recap_deletion_checks" dagster_project/definitions.py
 grep -q "soda contract verify" scripts/run_phase_d_smoke.sh
 grep -q "phase_d_local_smoke_job" dagster_project/definitions.py
 grep -q "note_body" dagster_project/definitions.py
 grep -q "reveal_payload" dagster_project/definitions.py
 grep -q "exact_gps" dagster_project/definitions.py
+grep -q "raw_audio" dagster_project/definitions.py
+grep -q "speaker_embedding" dagster_project/definitions.py
+grep -q "pairwise_duration" dagster_project/definitions.py
 grep -q "soda-core==4.14.0" pyproject.toml
 grep -q "soda-postgres==4.14.0" pyproject.toml
 

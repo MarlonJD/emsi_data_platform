@@ -29,6 +29,15 @@ PRODUCT_REPORTING_SODA_CONTRACT_PATHS = tuple(
     PRODUCT_REPORTING_SODA_CONTRACT_DIR / contract_name
     for contract_name in PRODUCT_REPORTING_SODA_CONTRACT_NAMES
 )
+PRIVACY_SODA_CONTRACT_NAMES = (
+    "voice_usage_session_summary.yml",
+    "privacy_lifecycle_contract.yml",
+    "personal_recap_monthly.yml",
+)
+PRIVACY_SODA_CONTRACT_PATHS = tuple(
+    PRODUCT_REPORTING_SODA_CONTRACT_DIR / contract_name
+    for contract_name in PRIVACY_SODA_CONTRACT_NAMES
+)
 
 BLOCKED_IDENTIFIER_PATTERN = (
     r'("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|'
@@ -40,6 +49,11 @@ BLOCKED_IDENTIFIER_PATTERN = (
     r'"search_text"|"raw_search_text"|"raw_text"|"raw_content"|"post_body"|'
     r'"comment_body"|"reply_body"|"dm_content"|"raw_policy_text"|'
     r'"request_body"|"response_body"|"transcript"|"screenshot"|"view_hierarchy"|'
+    r'"raw_audio"|"audio_frame"|"spoken_words"|"caption"|"summary"|"topic"|'
+    r'"sentiment"|"emotion"|"voiceprint"|"speaker_embedding"|"speaker_identity"|'
+    r'"speaking_timeline"|"speaking_interval"|"vad_frame_list"|'
+    r'"co_participant_key"|"pairwise_duration"|"private_room_name"|'
+    r'"raw_room_title"|"ocr"|"raw_filename"|'
     r'"support_payload"|"support_contact"|"contact_payload"|"reveal_payload"|'
     r'"reveal_value"|"contact_value"|"payload_value"|"exact_gps"|"gps"|'
     r'"latitude"|"longitude"|"lat"|"lon")'
@@ -269,6 +283,127 @@ PRODUCT_REPORTING_ASSETS = {
     **PRODUCT_REPORTING_PHASE5_ASSETS,
 }
 
+PRIVACY_LIFECYCLE_ASSETS = {
+    "privacy.retention_policy_registry": {
+        "group": "privacy_policy",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "retention_policy_ids_present, approval_id_present, anonymize_or_delete_named",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.retention_candidates_daily": {
+        "group": "privacy_retention",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "expired_partitions_identified, personal_state_classified, source_window_declared",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.anonymous_candidate_build": {
+        "group": "privacy_anonymization",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "identifier_free_candidate, allowed_dimensions_only, method_version_present",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.anonymization_checks": {
+        "group": "privacy_quality",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "n_thresholds, complementary_suppression, reidentification_risk_check, evidence_id_present",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.anonymous_aggregate_publish": {
+        "group": "privacy_anonymization",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "publish_only_after_passed_checks, anonymous_zone_no_stable_identifier",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.expired_personal_candidates": {
+        "group": "privacy_deletion",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "expired_personal_rows_enumerated, delete_scope_partition_scoped",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.personal_data_purge": {
+        "group": "privacy_deletion",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "purge_runs_even_when_anonymization_fails, late_event_resurrection_blocked",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.downstream_cleanup_checks": {
+        "group": "privacy_quality",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "analytics_optout_cleanup, recap_optout_cleanup, account_deletion_cleanup, feed_profile_reset_cleanup",
+        "status": "contract_scaffold_only",
+    },
+    "privacy.lifecycle_audit": {
+        "group": "privacy_audit",
+        "cadence": "privacy_lifecycle_daily_job",
+        "freshness": "<= 24 hours",
+        "checks": "minimum_three_year_audit, incident_record_on_anonymization_failure, evidence_id_present",
+        "status": "contract_scaffold_only",
+    },
+}
+
+VOICE_USAGE_ASSETS = {
+    "stage.stg_analytics_voice_session_summary": {
+        "group": "voice_usage_stage",
+        "cadence": "privacy_contract_guard_job",
+        "freshness": "<= 24 hours",
+        "checks": "allowed_bounded_fields_only, production_rows_absent_until_legal_go",
+        "status": "contract_scaffold_only",
+    },
+    "raw_vault.s_voice_mic_activity_raw": {
+        "group": "voice_usage_raw_vault",
+        "cadence": "privacy_contract_guard_job",
+        "freshness": "<= 24 hours",
+        "checks": "no_timeline_no_pairwise_no_audio_content, legal_mode_disabled_before_go",
+        "status": "contract_scaffold_only",
+    },
+    "business_vault.s_voice_speech_activity_daily": {
+        "group": "voice_usage_business_vault",
+        "cadence": "privacy_contract_guard_job",
+        "freshness": "<= 24 hours",
+        "checks": "bounded_summary_only, small_cell_suppression, no_feed_personalization_output",
+        "status": "contract_scaffold_only",
+    },
+    "quality.voice_usage_soda_contracts": {
+        "group": "privacy_quality",
+        "cadence": "privacy_contract_guard_job",
+        "freshness": "<= 24 hours",
+        "checks": "voice_usage_session_summary_contract_declared",
+        "status": "contract_declared_not_executed_without_runtime_sources",
+        "soda_contracts": ",".join(PRIVACY_SODA_CONTRACT_NAMES),
+    },
+}
+
+PERSONAL_RECAP_ASSETS = {
+    "private.s_user_private_recap_monthly": {
+        "group": "personal_recap_private",
+        "cadence": "privacy_contract_guard_job",
+        "freshness": "<= 24 hours",
+        "checks": "default_off, opt_in_required, self_only, raw_event_retention_not_extended",
+        "status": "contract_scaffold_only",
+    },
+    "quality.personal_recap_deletion_checks": {
+        "group": "privacy_quality",
+        "cadence": "privacy_contract_guard_job",
+        "freshness": "<= 24 hours",
+        "checks": "recap_optout_deletes_private_counters, account_deletion_deletes_generated_recap",
+        "status": "contract_scaffold_only",
+    },
+}
+
+PRIVACY_ANALYTICS_CONTRACT_ASSETS = {
+    **PRIVACY_LIFECYCLE_ASSETS,
+    **VOICE_USAGE_ASSETS,
+    **PERSONAL_RECAP_ASSETS,
+}
+
 
 @asset(group_name="platform_baseline")
 def platform_baseline_decisions() -> dict[str, str]:
@@ -283,6 +418,13 @@ def platform_baseline_decisions() -> dict[str, str]:
 
 def product_reporting_asset_contract(context: Any, asset_key: str) -> dict[str, str]:
     contract = PRODUCT_REPORTING_ASSETS[asset_key]
+    metadata = {"asset_key": asset_key, **contract}
+    context.add_output_metadata(metadata)
+    return metadata
+
+
+def privacy_analytics_asset_contract(context: Any, asset_key: str) -> dict[str, str]:
+    contract = PRIVACY_ANALYTICS_CONTRACT_ASSETS[asset_key]
     metadata = {"asset_key": asset_key, **contract}
     context.add_output_metadata(metadata)
     return metadata
@@ -521,6 +663,89 @@ def product_reporting_soda_mart_contracts(context) -> dict[str, str]:
     return output_metadata
 
 
+@asset(name="retention_policy_registry", key_prefix=["privacy"], group_name="privacy_policy")
+def privacy_retention_policy_registry_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.retention_policy_registry")
+
+
+@asset(name="retention_candidates_daily", key_prefix=["privacy"], group_name="privacy_retention")
+def privacy_retention_candidates_daily_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.retention_candidates_daily")
+
+
+@asset(name="anonymous_candidate_build", key_prefix=["privacy"], group_name="privacy_anonymization")
+def privacy_anonymous_candidate_build_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.anonymous_candidate_build")
+
+
+@asset(name="anonymization_checks", key_prefix=["privacy"], group_name="privacy_quality")
+def privacy_anonymization_checks_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.anonymization_checks")
+
+
+@asset(name="anonymous_aggregate_publish", key_prefix=["privacy"], group_name="privacy_anonymization")
+def privacy_anonymous_aggregate_publish_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.anonymous_aggregate_publish")
+
+
+@asset(name="expired_personal_candidates", key_prefix=["privacy"], group_name="privacy_deletion")
+def privacy_expired_personal_candidates_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.expired_personal_candidates")
+
+
+@asset(name="personal_data_purge", key_prefix=["privacy"], group_name="privacy_deletion")
+def privacy_personal_data_purge_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.personal_data_purge")
+
+
+@asset(name="downstream_cleanup_checks", key_prefix=["privacy"], group_name="privacy_quality")
+def privacy_downstream_cleanup_checks_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.downstream_cleanup_checks")
+
+
+@asset(name="lifecycle_audit", key_prefix=["privacy"], group_name="privacy_audit")
+def privacy_lifecycle_audit_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "privacy.lifecycle_audit")
+
+
+@asset(name="stg_analytics_voice_session_summary", key_prefix=["stage"], group_name="voice_usage_stage")
+def stg_analytics_voice_session_summary_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "stage.stg_analytics_voice_session_summary")
+
+
+@asset(name="s_voice_mic_activity_raw", key_prefix=["raw_vault"], group_name="voice_usage_raw_vault")
+def s_voice_mic_activity_raw_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "raw_vault.s_voice_mic_activity_raw")
+
+
+@asset(name="s_voice_speech_activity_daily", key_prefix=["business_vault"], group_name="voice_usage_business_vault")
+def s_voice_speech_activity_daily_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "business_vault.s_voice_speech_activity_daily")
+
+
+@asset(name="voice_usage_soda_contracts", key_prefix=["quality"], group_name="privacy_quality")
+def voice_usage_soda_contracts_contract(context) -> dict[str, str]:
+    metadata = privacy_analytics_asset_contract(context, "quality.voice_usage_soda_contracts")
+    output_metadata = {
+        **metadata,
+        "status": "declared_not_executed_without_runtime_sources",
+        "contract_count": str(len(PRIVACY_SODA_CONTRACT_PATHS)),
+        "declared_contracts": ",".join(contract_path.name for contract_path in PRIVACY_SODA_CONTRACT_PATHS),
+    }
+    context.add_output_metadata(output_metadata)
+    return output_metadata
+
+
+@asset(name="s_user_private_recap_monthly", key_prefix=["private"], group_name="personal_recap_private")
+def s_user_private_recap_monthly_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "private.s_user_private_recap_monthly")
+
+
+@asset(name="personal_recap_deletion_checks", key_prefix=["quality"], group_name="privacy_quality")
+def personal_recap_deletion_checks_contract(context) -> dict[str, str]:
+    return privacy_analytics_asset_contract(context, "quality.personal_recap_deletion_checks")
+
+
 @asset(group_name="phase_d_local_smoke")
 def analytics_raw_event_landing_smoke(context) -> dict[str, int]:
     import psycopg2
@@ -680,6 +905,29 @@ product_reporting_phase5_quality_job = define_asset_job(
     ),
 )
 
+privacy_lifecycle_daily_job = define_asset_job(
+    name="privacy_lifecycle_daily_job",
+    selection=(
+        AssetSelection.groups("privacy_policy")
+        | AssetSelection.groups("privacy_retention")
+        | AssetSelection.groups("privacy_anonymization")
+        | AssetSelection.groups("privacy_deletion")
+        | AssetSelection.groups("privacy_quality")
+        | AssetSelection.groups("privacy_audit")
+    ),
+)
+
+privacy_contract_guard_job = define_asset_job(
+    name="privacy_contract_guard_job",
+    selection=(
+        AssetSelection.groups("voice_usage_stage")
+        | AssetSelection.groups("voice_usage_raw_vault")
+        | AssetSelection.groups("voice_usage_business_vault")
+        | AssetSelection.groups("personal_recap_private")
+        | AssetSelection.groups("privacy_quality")
+    ),
+)
+
 
 defs = Definitions(
     assets=[
@@ -717,6 +965,21 @@ defs = Definitions(
         product_reporting_mart_expected_contract_ids_present_contract,
         product_reporting_forbidden_output_columns_absent_contract,
         product_reporting_soda_mart_contracts,
+        privacy_retention_policy_registry_contract,
+        privacy_retention_candidates_daily_contract,
+        privacy_anonymous_candidate_build_contract,
+        privacy_anonymization_checks_contract,
+        privacy_anonymous_aggregate_publish_contract,
+        privacy_expired_personal_candidates_contract,
+        privacy_personal_data_purge_contract,
+        privacy_downstream_cleanup_checks_contract,
+        privacy_lifecycle_audit_contract,
+        stg_analytics_voice_session_summary_contract,
+        s_voice_mic_activity_raw_contract,
+        s_voice_speech_activity_daily_contract,
+        voice_usage_soda_contracts_contract,
+        s_user_private_recap_monthly_contract,
+        personal_recap_deletion_checks_contract,
         analytics_raw_event_landing_smoke,
         dbt_phase_d_smoke,
         soda_raw_event_landing_scan,
@@ -727,5 +990,7 @@ defs = Definitions(
         product_reporting_phase2_bdv_job,
         product_reporting_phase3_pl_job,
         product_reporting_phase5_quality_job,
+        privacy_lifecycle_daily_job,
+        privacy_contract_guard_job,
     ],
 )

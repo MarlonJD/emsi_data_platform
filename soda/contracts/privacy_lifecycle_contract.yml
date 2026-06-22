@@ -1,0 +1,46 @@
+dataset: analytics_postgres/analytics_ops/privacy_lifecycle_audit
+
+checks:
+  - failed_rows:
+      name: Anonymous publish requires passed checks and evidence
+      qualifier: anonymous_publish_has_method_and_evidence
+      expression: |
+        anonymous_publish_status = 'published'
+        AND (
+          anonymization_check_status <> 'passed'
+          OR anonymization_method_version IS NULL
+          OR evidence_id IS NULL
+        )
+  - failed_rows:
+      name: Anonymization failure does not block expired personal purge
+      qualifier: anonymization_failure_purge_required
+      expression: |
+        anonymization_check_status = 'failed'
+        AND expired_personal_purge_status <> 'completed'
+  - failed_rows:
+      name: Anonymous zone is identifier free
+      qualifier: anonymous_zone_identifier_free
+      expression: |
+        anonymous_publish_status = 'published'
+        AND (
+          stable_identifier_present = true
+          OR exact_timestamp_present = true
+          OR exact_location_present = true
+          OR disallowed_dimension_present = true
+        )
+
+columns:
+  - name: lifecycle_run_id
+    checks:
+      - missing:
+          name: Lifecycle run id is present
+      - duplicate:
+          name: Lifecycle run id is unique
+  - name: retention_policy_id
+    checks:
+      - missing:
+          name: Retention policy is present
+  - name: evidence_id
+    checks:
+      - missing:
+          name: Evidence id is present

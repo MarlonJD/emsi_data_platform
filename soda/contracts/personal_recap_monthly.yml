@@ -1,0 +1,35 @@
+dataset: analytics_postgres/analytics_private/s_user_private_recap_monthly
+
+checks:
+  - failed_rows:
+      name: Personal recap is opt-in only
+      qualifier: personal_recap_opt_in_required
+      expression: |
+        consent_or_service_activation_id IS NULL
+        OR production_collection_enabled_before_legal_go = true
+  - failed_rows:
+      name: Personal recap rows are self-only private counters
+      qualifier: personal_recap_allowed_monthly_shape
+      expression: |
+        subject_key IS NULL
+        OR month IS NULL
+        OR retention_policy_id IS NULL
+
+columns:
+  - name: subject_key
+    checks:
+      - missing:
+          name: Subject key is present
+  - name: month
+    checks:
+      - missing:
+          name: Month is present
+  - name: purpose_id
+    checks:
+      - invalid:
+          name: Personal recap purpose id is fixed
+          valid_values: ["personal_insights.yearly_recap.v1"]
+  - name: retention_policy_id
+    checks:
+      - missing:
+          name: Retention policy is declared

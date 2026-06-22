@@ -1,0 +1,48 @@
+dataset: analytics_postgres/analytics_stage/stg_analytics_voice_session_summary
+
+checks:
+  - failed_rows:
+      name: Voice speaker activity production rows are absent before legal go
+      qualifier: voice_speaker_activity_gate_closed
+      expression: |
+        production_write_enabled = true
+        OR (
+          voice_speaker_activity_legal_mode = 'disabled'
+          AND record_source_mode NOT IN ('synthetic_fixture', 'local_contract_test')
+        )
+  - failed_rows:
+      name: Voice summary contains only approved bounded fields
+      qualifier: voice_summary_no_pairwise_or_content_keys
+      expression: |
+        speech_activity_duration_bucket NOT IN ('none', 'under_1_minute', '1_to_5_minutes', '5_to_15_minutes', '15_plus_minutes')
+        OR (
+          speech_activity_ratio_bucket IS NOT NULL
+          AND speech_activity_ratio_bucket NOT IN ('none', 'low', 'medium', 'high')
+        )
+
+columns:
+  - name: event_id
+    checks:
+      - duplicate:
+          name: Voice summary event IDs are unique
+  - name: voice_session_key
+    checks:
+      - missing:
+          name: Voice session key is present
+  - name: room_key
+    checks:
+      - missing:
+          name: Voice room key is present
+  - name: room_type_key
+    checks:
+      - missing:
+          name: Room type key is present
+  - name: privacy_class
+    checks:
+      - invalid:
+          name: Privacy class is pseudonymous
+          valid_values: ["pseudonymous"]
+  - name: retention_policy_id
+    checks:
+      - missing:
+          name: Retention policy is declared
