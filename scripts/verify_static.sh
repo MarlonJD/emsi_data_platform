@@ -139,12 +139,24 @@ test -f soda/contracts/product_reporting_contract_coverage.yml
 test -f soda/contracts/voice_usage_session_summary.yml
 test -f soda/contracts/privacy_lifecycle_contract.yml
 test -f soda/contracts/personal_recap_monthly.yml
+test -f ingest_worker/privacy_lifecycle_smoke.py
+test -x scripts/run_privacy_lifecycle_smoke.sh
 grep -q "analytics_mart/mart_product_reporting_content_performance_daily" soda/contracts/product_reporting_content_performance_daily.yml
 grep -q "analytics_mart/mart_product_reporting_feed_interest_proxy_daily" soda/contracts/product_reporting_feed_interest_proxy_daily.yml
 grep -q "Europe/Istanbul" soda/contracts/product_reporting_reaction_valence_daily.yml
 grep -q "voice_speaker_activity_gate_closed" soda/contracts/voice_usage_session_summary.yml
 grep -q "anonymization_failure_purge_required" soda/contracts/privacy_lifecycle_contract.yml
 grep -q "personal_recap_opt_in_required" soda/contracts/personal_recap_monthly.yml
+grep -q "retention_candidates" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "anonymous_candidate_checks" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "purge_after_anonymization_failure" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "lifecycle_audit" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "opt_out_deletion_cleanup" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "cleanup_analytics_opt_out" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "cleanup_account_deletion" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "ClickHouse candidate-only non-canonical" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "voiceSpeakerActivityAnalytics" ingest_worker/privacy_lifecycle_smoke.py
+grep -q "personalYearlyRecap" ingest_worker/privacy_lifecycle_smoke.py
 grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
 grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
@@ -165,6 +177,9 @@ grep -q "soda-postgres==4.14.0" pyproject.toml
 
 PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
   python3 -m py_compile dagster_project/*.py ingest_worker/*.py
+
+PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-/tmp/emsi-data-platform-pycache}" \
+  ./scripts/run_privacy_lifecycle_smoke.sh >/dev/null
 
 if grep -R "soda-core-postgres" docker dbt dagster_project soda pyproject.toml docker-compose.yml docker-compose.superset-postgres-metadata.yml; then
   echo "legacy Soda v3 package found in runnable scaffold" >&2
