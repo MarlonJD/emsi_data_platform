@@ -1231,6 +1231,10 @@ status_evaluation as (
        and expected_target_min_row_count = 0
        and observed_row_count = 0
         then 'EXPECTED_EMPTY'
+      when upstream_activity_count > 0
+       and expected_target_min_row_count = 0
+       and observed_row_count = 0
+        then 'EXPECTED_EMPTY'
       when expected_target_min_row_count > 0
        and observed_row_count = 0
        and evaluated_at <= partition_complete_after + (late_arrival_grace_minutes * interval '1 minute')
@@ -1257,6 +1261,10 @@ status_evaluation as (
        and expected_target_min_row_count = 0
        and observed_row_count = 0
         then 'expected_empty_proven_by_source_observation'
+      when upstream_activity_count > 0
+       and expected_target_min_row_count = 0
+       and observed_row_count = 0
+        then 'expected_exclusion_proven_by_source_contract'
       when expected_target_min_row_count > 0
        and observed_row_count = 0
        and evaluated_at <= partition_complete_after + (late_arrival_grace_minutes * interval '1 minute')

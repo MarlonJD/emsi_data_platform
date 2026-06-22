@@ -60,6 +60,25 @@ synthetic_trust_rows as (
   union all
 
   select
+    'quality_fixture.expected_exclusion_partition'::text,
+    '2026-06-20'::text,
+    date '2026-06-20',
+    'STALE'::text,
+    'freshness_target_exceeded'::text,
+    'EXPECTED_EMPTY'::text,
+    'expected_exclusion_proven_by_source_contract'::text,
+    0::bigint,
+    0::bigint,
+    0::bigint,
+    'zero_target_expected_by_contract'::text,
+    'closed_partition'::text,
+    'EXPECTED_EMPTY'::text,
+    'expected_empty_partition'::text,
+    true
+
+  union all
+
+  select
     'quality_fixture.late_arrival_open_partition'::text,
     '2026-06-22'::text,
     date '2026-06-22',
@@ -223,6 +242,21 @@ expected_empty_failures as (
     and trust_status <> 'EXPECTED_EMPTY'
 ),
 
+expected_exclusion_failures as (
+  select
+    asset_key,
+    partition_key,
+    reporting_date,
+    freshness_status,
+    completeness_status,
+    trust_status,
+    'expected_exclusion_classification_failed'::text as violation,
+    trust_reason_code
+  from trust_rows
+  where expected_minimum_state = 'zero_target_expected_by_contract'
+    and trust_status <> 'EXPECTED_EMPTY'
+),
+
 late_open_failures as (
   select
     asset_key,
@@ -248,5 +282,7 @@ union all
 select * from freshness_hidden_partition_failures
 union all
 select * from expected_empty_failures
+union all
+select * from expected_exclusion_failures
 union all
 select * from late_open_failures
