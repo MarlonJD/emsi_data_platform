@@ -140,10 +140,11 @@ make docker-data-platform
 
 The backend target uses this Compose project network
 (`emsi-data-platform_default`) so the API container can publish to
-`redpanda:9092`. It starts only `analytics-postgres`, `dagster-postgres`,
-  `redpanda`, `redpanda-topic-init`, and `analytics-ingest-worker` on the
-  data-platform side. Superset, Grafana, Evidence.dev, SeaweedFS, and
-  ClickHouse stay opt-in.
+`redpanda:9092`. It starts `analytics-postgres`, `dagster-postgres`,
+`dagster-webserver`, `dagster-daemon`, `redpanda`, `redpanda-topic-init`, and
+`analytics-ingest-worker` on the data-platform side. The Dagster UI is available
+at `http://localhost:3000` after the target is healthy. Superset, Grafana,
+Evidence.dev, SeaweedFS, and ClickHouse stay opt-in.
 
 This is local-dev integration evidence only. The Go API still writes accepted
 analytics events to its legacy `analytics.events` table while it also publishes
