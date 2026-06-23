@@ -13,7 +13,12 @@ services:
       POSTGRES_USER: ${ANALYTICS_POSTGRES_USER:-analytics}
       POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD:-analytics_local_password}
     ports:
-      - "5438:5432"
+      # Publish the Product Reporting mart only on host loopback. A bare
+      # "5438:5432" binds 0.0.0.0 (all interfaces); pinning 127.0.0.1 keeps the
+      # local-staging-equivalent mart reachable from host tools and host-run
+      # services only. In-container consumers (dbt/Dagster/Soda) reach it over
+      # the compose network as analytics-postgres:5432, not this host port.
+      - "127.0.0.1:5438:5432"
     volumes:
       - analytics_postgres_data:/var/lib/postgresql
       - ./sql/analytics-postgres-init:/docker-entrypoint-initdb.d:ro
