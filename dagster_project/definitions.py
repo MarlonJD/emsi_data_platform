@@ -26,6 +26,12 @@ from dagster_project.soda_quality_gate import (
     format_soda_check_counts,
     validate_product_reporting_soda_contract_names,
 )
+from dagster_project.quality_persistence import (
+    build_quality_run_result,
+    dataset_name_from_contract,
+    persist_quality_run_result,
+    utcnow,
+)
 
 
 WORKSPACE_DIR = Path(os.getenv("DATA_PLATFORM_WORKSPACE", "/workspace"))
@@ -66,6 +72,12 @@ PRIVACY_REQUEST_SENSOR_TYPES = (
     "feed_profile_reset",
     "kvkk_deletion_request",
 )
+
+
+class LocalSmokeCommandError(RuntimeError):
+    def __init__(self, message: str, output: str) -> None:
+        super().__init__(message)
+        self.output = output
 
 BLOCKED_IDENTIFIER_PATTERN = (
     r'("email"|"emailAddress"|"phone"|"phoneNumber"|"authorization"|"token"|'
@@ -1047,14 +1059,50 @@ def product_reporting_soda_mart_contracts(context) -> dict[str, str]:
     verified_contracts = []
     observed_check_counts = {}
     for contract_path in PRODUCT_REPORTING_SODA_CONTRACT_PATHS:
-        output = run_soda_contract(context, contract_path)
-        gate_result = assert_soda_contract_gate(
-            contract_name=contract_path.name,
-            output=output,
-            expected_check_count=PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS[contract_path.name],
+        started_at = utcnow()
+        output = ""
+        observed_check_count = None
+        try:
+            output = run_soda_contract(context, contract_path)
+            gate_result = assert_soda_contract_gate(
+                contract_name=contract_path.name,
+                output=output,
+                expected_check_count=PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS[contract_path.name],
+            )
+            observed_check_count = gate_result.observed_check_count
+        except Exception as error:
+            if isinstance(error, LocalSmokeCommandError):
+                output = error.output
+            persist_quality_run_result(
+                build_quality_run_result(
+                    contract_name=contract_path.name,
+                    dataset_name=dataset_name_from_contract(contract_path),
+                    pipeline_run_id=getattr(context, "run_id", None),
+                    status="failed",
+                    started_at=started_at,
+                    finished_at=utcnow(),
+                    expected_check_count=PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS[contract_path.name],
+                    observed_check_count=observed_check_count,
+                    output=output,
+                    error_message=str(error),
+                )
+            )
+            raise
+        persist_quality_run_result(
+            build_quality_run_result(
+                contract_name=contract_path.name,
+                dataset_name=dataset_name_from_contract(contract_path),
+                pipeline_run_id=getattr(context, "run_id", None),
+                status="passed",
+                started_at=started_at,
+                finished_at=utcnow(),
+                expected_check_count=PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS[contract_path.name],
+                observed_check_count=observed_check_count,
+                output=output,
+            )
         )
         verified_contracts.append(contract_path.name)
-        observed_check_counts[contract_path.name] = gate_result.observed_check_count
+        observed_check_counts[contract_path.name] = observed_check_count
     observed_total_check_count = sum(observed_check_counts.values())
     if observed_total_check_count != PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT:
         raise RuntimeError(
@@ -1363,8 +1411,9 @@ def run_command(context: Any, command: list[str]) -> str:
     if completed.stdout:
         context.log.info(completed.stdout)
     if completed.returncode != 0:
-        raise RuntimeError(
-            f"local smoke command failed with exit {completed.returncode}: {' '.join(command)}"
+        raise LocalSmokeCommandError(
+            f"local smoke command failed with exit {completed.returncode}: {' '.join(command)}",
+            completed.stdout or "",
         )
     return completed.stdout or ""
 

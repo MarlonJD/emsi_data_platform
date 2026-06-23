@@ -42,6 +42,11 @@ location in the UI, launch through the workspace-backed helper:
 ./scripts/launch_dagster_job.sh product_reporting_phase5_quality_job
 ```
 
+`product_reporting_phase5_quality_job` writes Product Reporting Soda contract
+run history to `ops.data_quality_runs`. Failed or errored contract checks also
+write redacted critical findings to `ops.data_quality_findings` before the job
+fails closed.
+
 Use direct `dagster job execute` only for intentionally isolated CLI debugging;
 those runs remain visible under Runs but do not carry the same external
 code-location origin metadata.

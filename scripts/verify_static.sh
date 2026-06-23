@@ -22,6 +22,7 @@ grep -q "CLICKHOUSE_IMAGE_STATUS=candidate-local-smoke" versions.env
 grep -q "CLICKHOUSE_SECURITY_SCAN_STATUS=pending-local-vulnerability-scan" versions.env
 grep -q "CLICKHOUSE_PRODUCTION_STATUS=blocked-pending-topology-security-governance-restore-owner-approval" versions.env
 test -f sql/clickhouse-init/010_hot_analytics.sql
+test -f sql/analytics-postgres-init/020_ops_data_quality.sql
 test -f docs/contracts/clickhouse-hot-analytics-promotion-gate.md
 grep -q "ENGINE = MergeTree" sql/clickhouse-init/010_hot_analytics.sql
 grep -q "ENGINE = SummingMergeTree" sql/clickhouse-init/010_hot_analytics.sql
@@ -230,6 +231,8 @@ test -f soda/contracts/personal_recap_monthly.yml
 test -f ingest_worker/privacy_lifecycle_smoke.py
 test -f ingest_worker/privacy_lifecycle_runtime.py
 test -f ingest_worker/privacy_lifecycle_runtime_test.py
+test -f dagster_project/quality_persistence.py
+test -f dagster_project/quality_persistence_test.py
 test -f ingest_worker/fixtures/privacy_lifecycle_source_bound_packet.json
 test -x scripts/run_privacy_lifecycle_smoke.sh
 test -x scripts/run_privacy_lifecycle_runtime.sh
@@ -268,6 +271,11 @@ if grep -q "emsi_qa\\|emsi_qqq" ingest_worker/fixtures/privacy_lifecycle_source_
   exit 1
 fi
 grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
+grep -q "persist_quality_run_result" dagster_project/definitions.py
+grep -q "ops.data_quality_runs" dagster_project/quality_persistence.py
+grep -q "ops.data_quality_findings" dagster_project/quality_persistence.py
+grep -q "CREATE TABLE IF NOT EXISTS ops.data_quality_runs" sql/analytics-postgres-init/020_ops_data_quality.sql
+grep -q "CREATE TABLE IF NOT EXISTS ops.data_quality_findings" sql/analytics-postgres-init/020_ops_data_quality.sql
 grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS" dagster_project/soda_quality_gate.py
 grep -q "PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT" dagster_project/definitions.py

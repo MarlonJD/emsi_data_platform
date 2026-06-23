@@ -66,7 +66,10 @@ docker compose --env-file versions.env --env-file .env --profile local run --rm 
 Dagster exposes the same Product Reporting contract coverage through
 `product_reporting_phase5_quality_job` and the
 `quality/product_reporting_soda_mart_contracts` asset in the
-`product_reporting_mart_quality` group.
+`product_reporting_mart_quality` group. Each Product Reporting Soda contract
+run now persists a redacted audit row to `ops.data_quality_runs`; failed or
+errored contract runs also persist one open critical row in
+`ops.data_quality_findings` before the Dagster asset fails closed.
 
 When the local Dagster daemon is running, the local schedules are enabled by
 default and create Airflow-style historical ticks and runs in the Dagster UI:
