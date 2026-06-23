@@ -14,6 +14,15 @@ from dagster import (
     define_asset_job,
 )
 
+from dagster_project.soda_quality_gate import (
+    PRODUCT_REPORTING_SODA_CONTRACT_NAMES,
+    PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS,
+    PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT,
+    assert_soda_contract_gate,
+    format_soda_check_counts,
+    validate_product_reporting_soda_contract_names,
+)
+
 
 WORKSPACE_DIR = Path(os.getenv("DATA_PLATFORM_WORKSPACE", "/workspace"))
 DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR", WORKSPACE_DIR / "dbt"))
@@ -23,15 +32,6 @@ SODA_CONTRACT_PATH = Path(
 )
 PRODUCT_REPORTING_SODA_CONTRACT_DIR = Path(
     os.getenv("PRODUCT_REPORTING_SODA_CONTRACT_DIR", WORKSPACE_DIR / "soda" / "contracts")
-)
-PRODUCT_REPORTING_SODA_CONTRACT_NAMES = (
-    "product_reporting_occupation_cohort_daily.yml",
-    "product_reporting_content_performance_daily.yml",
-    "product_reporting_emoji_reaction_daily.yml",
-    "product_reporting_reaction_valence_daily.yml",
-    "product_reporting_feed_interest_proxy_daily.yml",
-    "product_reporting_together_coordination_daily.yml",
-    "product_reporting_contract_coverage.yml",
 )
 PRODUCT_REPORTING_SODA_CONTRACT_PATHS = tuple(
     PRODUCT_REPORTING_SODA_CONTRACT_DIR / contract_name
@@ -1026,14 +1026,35 @@ def product_reporting_forbidden_output_columns_absent_contract(context) -> dict[
 )
 def product_reporting_soda_mart_contracts(context) -> dict[str, str]:
     metadata = product_reporting_asset_contract(context, "quality.product_reporting_soda_mart_contracts")
+    validate_product_reporting_soda_contract_names(PRODUCT_REPORTING_SODA_CONTRACT_NAMES)
     verified_contracts = []
+    observed_check_counts = {}
     for contract_path in PRODUCT_REPORTING_SODA_CONTRACT_PATHS:
-        run_soda_contract(context, contract_path)
+        output = run_soda_contract(context, contract_path)
+        gate_result = assert_soda_contract_gate(
+            contract_name=contract_path.name,
+            output=output,
+            expected_check_count=PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS[contract_path.name],
+        )
         verified_contracts.append(contract_path.name)
+        observed_check_counts[contract_path.name] = gate_result.observed_check_count
+    observed_total_check_count = sum(observed_check_counts.values())
+    if observed_total_check_count != PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT:
+        raise RuntimeError(
+            "Product Reporting Soda gate expected "
+            f"{PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT} total checks, "
+            f"observed {observed_total_check_count}"
+        )
     output_metadata = {
         **metadata,
         "status": "passed",
         "contract_count": str(len(verified_contracts)),
+        "expected_contract_count": str(len(PRODUCT_REPORTING_SODA_CONTRACT_NAMES)),
+        "expected_check_count": str(PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT),
+        "observed_check_count": str(observed_total_check_count),
+        "expected_check_counts": format_soda_check_counts(PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS),
+        "observed_check_counts": format_soda_check_counts(observed_check_counts),
+        "critical_check_state": "all_evaluated",
         "verified_contracts": ",".join(verified_contracts),
     }
     context.add_output_metadata(output_metadata)
@@ -1294,8 +1315,8 @@ def soda_raw_event_landing_scan(
     return {"status": "passed", "contract_path": str(SODA_CONTRACT_PATH)}
 
 
-def run_soda_contract(context: Any, contract_path: Path) -> None:
-    run_command(
+def run_soda_contract(context: Any, contract_path: Path) -> str:
+    return run_command(
         context,
         [
             "soda",
@@ -1309,7 +1330,7 @@ def run_soda_contract(context: Any, contract_path: Path) -> None:
     )
 
 
-def run_command(context: Any, command: list[str]) -> None:
+def run_command(context: Any, command: list[str]) -> str:
     context.log.info("Running local smoke command: %s", " ".join(command))
     env = os.environ.copy()
     env.setdefault("DBT_PROFILES_DIR", str(DBT_PROJECT_DIR))
@@ -1328,6 +1349,7 @@ def run_command(context: Any, command: list[str]) -> None:
         raise RuntimeError(
             f"local smoke command failed with exit {completed.returncode}: {' '.join(command)}"
         )
+    return completed.stdout or ""
 
 
 phase_d_local_smoke_job = define_asset_job(

@@ -269,7 +269,11 @@ if grep -q "emsi_qa\\|emsi_qqq" ingest_worker/fixtures/privacy_lifecycle_source_
 fi
 grep -q "product_reporting_soda_mart_contracts" dagster_project/definitions.py
 grep -q "PRODUCT_REPORTING_SODA_CONTRACT_NAMES" dagster_project/definitions.py
-grep -q "product_reporting_together_coordination_daily.yml" dagster_project/definitions.py
+grep -q "PRODUCT_REPORTING_SODA_EXPECTED_CHECK_COUNTS" dagster_project/soda_quality_gate.py
+grep -q "PRODUCT_REPORTING_SODA_EXPECTED_TOTAL_CHECK_COUNT" dagster_project/definitions.py
+grep -q "observed_check_count" dagster_project/definitions.py
+grep -q "NOT_EVALUATED" dagster_project/soda_quality_gate.py
+grep -q "product_reporting_together_coordination_daily.yml" dagster_project/soda_quality_gate.py
 grep -q "PRIVACY_SODA_CONTRACT_NAMES" dagster_project/definitions.py
 grep -q "privacy_lifecycle_daily_job" dagster_project/definitions.py
 grep -q "privacy_contract_guard_job" dagster_project/definitions.py
