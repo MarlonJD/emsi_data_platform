@@ -281,6 +281,10 @@ grep -q "DefaultScheduleStatus.RUNNING" dagster_project/definitions.py
 grep -q "product_reporting_phase1_stage_rdv_quarter_hourly_schedule" dagster_project/definitions.py
 grep -q "product_reporting_phase2_bdv_hourly_schedule" dagster_project/definitions.py
 grep -q "privacy_contract_guard_hourly_schedule" dagster_project/definitions.py
+grep -q "privacy_request_sensor" dagster_project/definitions.py
+grep -q "PRIVACY_REQUEST_SENSOR_TYPES" dagster_project/definitions.py
+grep -q "kvkk_deletion_request" dagster_project/definitions.py
+grep -q "sensors=\\[" dagster_project/definitions.py
 grep -q "phase_d_local_smoke_daily_schedule" dagster_project/definitions.py
 grep -q "product_reporting_phase3_pl_daily_schedule" dagster_project/definitions.py
 grep -q "privacy_lifecycle_daily_schedule" dagster_project/definitions.py

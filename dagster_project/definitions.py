@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -9,9 +10,12 @@ from dagster import (
     AssetSelection,
     DefaultScheduleStatus,
     Definitions,
+    RunRequest,
     ScheduleDefinition,
+    SkipReason,
     asset,
     define_asset_job,
+    sensor,
 )
 
 from dagster_project.soda_quality_gate import (
@@ -48,6 +52,19 @@ PRIVACY_SODA_CONTRACT_PATHS = tuple(
 )
 PRIVACY_LIFECYCLE_DEFAULT_SOURCE_PACKET_PATH = (
     WORKSPACE_DIR / "ingest_worker" / "fixtures" / "privacy_lifecycle_source_bound_packet.json"
+)
+PRIVACY_REQUEST_SENSOR_INBOX_PATH = Path(
+    os.getenv(
+        "PRIVACY_REQUEST_SENSOR_INBOX_PATH",
+        WORKSPACE_DIR / "ingest_worker" / "runtime" / "privacy_request_events.jsonl",
+    )
+)
+PRIVACY_REQUEST_SENSOR_TYPES = (
+    "account_deletion",
+    "analytics_opt_out",
+    "recap_opt_out",
+    "feed_profile_reset",
+    "kvkk_deletion_request",
 )
 
 BLOCKED_IDENTIFIER_PATTERN = (
@@ -1561,6 +1578,57 @@ privacy_lifecycle_monthly_schedule = ScheduleDefinition(
 )
 
 
+@sensor(
+    name="privacy_request_sensor",
+    job=privacy_lifecycle_daily_job,
+    minimum_interval_seconds=300,
+    description=(
+        "Local privacy request trigger for account deletion, analytics opt-out, "
+        "recap opt-out, feed profile reset, and KVKK deletion request events."
+    ),
+)
+def privacy_request_sensor(context: Any):
+    inbox_path = PRIVACY_REQUEST_SENSOR_INBOX_PATH
+    if not inbox_path.exists():
+        yield SkipReason(f"privacy request inbox not found: {inbox_path}")
+        return
+
+    emitted = False
+    with inbox_path.open("r", encoding="utf-8") as inbox_file:
+        for line_number, raw_line in enumerate(inbox_file, start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                request_event = json.loads(line)
+            except json.JSONDecodeError as exc:
+                context.log.warning("Skipping malformed privacy request line %s: %s", line_number, exc)
+                continue
+
+            request_type = request_event.get("request_type")
+            if request_type not in PRIVACY_REQUEST_SENSOR_TYPES:
+                context.log.warning(
+                    "Skipping unsupported privacy request type on line %s: %s",
+                    line_number,
+                    request_type,
+                )
+                continue
+
+            request_id = str(request_event.get("request_id") or f"line-{line_number}")
+            emitted = True
+            yield RunRequest(
+                run_key=f"{request_type}:{request_id}",
+                tags={
+                    "emsi.local_dev": "true",
+                    "emsi.sensor": "privacy_request_sensor",
+                    "emsi.privacy_request_type": request_type,
+                },
+            )
+
+    if not emitted:
+        yield SkipReason("privacy request inbox contained no supported request events")
+
+
 defs = Definitions(
     assets=[
         platform_baseline_decisions,
@@ -1667,5 +1735,8 @@ defs = Definitions(
         product_reporting_phase5_quality_weekly_schedule,
         product_reporting_phase5_quality_monthly_schedule,
         privacy_lifecycle_monthly_schedule,
+    ],
+    sensors=[
+        privacy_request_sensor,
     ],
 )
